@@ -1,0 +1,11 @@
+.env
+.venv/
+venv/
+__pycache__/
+*.pyc
+.DS_Store
+
+data/articles.json
+data/*.jpg
+data/*.jpeg
+data/*.png
