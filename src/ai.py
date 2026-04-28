@@ -46,7 +46,9 @@ class SummaryService:
                 resp.raise_for_status()
                 data = resp.json()
             content = (data.get("choices", [{}])[0].get("message", {}).get("content", "") or "").strip()
-            return content[:max_chars] if content else self._fallback(title=title, text=clean_text, max_chars=max_chars)
+            if content:
+                return self._sanitize_summary_text(content)[:max_chars]
+            return self._fallback(title=title, text=clean_text, max_chars=max_chars)
         except Exception:
             logger.exception("DeepSeek 摘要失败，回退本地摘要")
             return self._fallback(title=title, text=clean_text, max_chars=max_chars)
@@ -68,4 +70,13 @@ class SummaryService:
     @staticmethod
     def _fallback(*, title: str, text: str, max_chars: int) -> str:
         body = " ".join(text.split())[: max_chars - 20]
-        return f"【摘要】{title}\n{body}"
+        return SummaryService._sanitize_summary_text(f"【摘要】{title}\n{body}")
+
+    @staticmethod
+    def _sanitize_summary_text(text: str) -> str:
+        out = text or ""
+        # Product requirement: do not expose markdown emphasis markers.
+        out = out.replace("**", "")
+        out = out.replace("\r\n", "\n").replace("\r", "\n")
+        out = "\n".join(line.rstrip() for line in out.split("\n"))
+        return out.strip()

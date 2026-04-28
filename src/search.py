@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import asyncio
+import html
 import logging
+import re
 import urllib.parse
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass
@@ -12,8 +14,15 @@ from urllib.parse import urlparse
 
 import httpx
 from ddgs import DDGS
+from googlenewsdecoder import gnewsdecoder
 
 logger = logging.getLogger(__name__)
+
+_TITLE_SOURCE_TAIL_RE = re.compile(r"\s*[-|—_]+\s*")
+_SOURCE_TOKEN_HINT_RE = re.compile(
+    r"(网|报|社|台|频道|新闻|资讯|财经|日报|晚报|观察|客户端|之声|news|finance|cn|com)$",
+    flags=re.IGNORECASE,
+)
 
 
 @dataclass
@@ -61,6 +70,37 @@ def _dedupe_hits(rows: list[SearchHit], *, max_results: int) -> list[SearchHit]:
     return out
 
 
+def normalize_title(raw_title: str) -> str:
+    title = " ".join((raw_title or "").strip().split())
+    if not title:
+        return "未命名"
+    # Repeatedly trim tail source marker: "标题 - 新浪网" / "标题 | 21财经".
+    for _ in range(3):
+        parts = _TITLE_SOURCE_TAIL_RE.split(title)
+        if len(parts) < 2:
+            break
+        tail = (parts[-1] or "").strip()
+        if not tail:
+            title = " - ".join(parts[:-1]).strip()
+            continue
+        tail_compact = tail.replace(" ", "")
+        if len(tail_compact) <= 16 or _SOURCE_TOKEN_HINT_RE.search(tail_compact):
+            title = " - ".join(parts[:-1]).strip()
+            continue
+        break
+    return title or "未命名"
+
+
+def normalize_snippet(raw_snippet: str) -> str:
+    snippet = raw_snippet or ""
+    snippet = re.sub(r"<[^>]+>", " ", snippet)
+    snippet = html.unescape(snippet)
+    # RSS snippets may include markdown artifacts like "**427支**".
+    snippet = snippet.replace("**", "")
+    snippet = re.sub(r"\s+", " ", snippet).strip()
+    return snippet
+
+
 async def google_news_search(query: str, max_results: int, timeout_seconds: float = 12.0) -> list[SearchHit]:
     q = urllib.parse.quote(query)
     url = f"https://news.google.com/rss/search?hl=zh-CN&gl=CN&ceid=CN:zh-Hans&q={q}"
@@ -80,6 +120,9 @@ def _parse_news_rss(text: str, *, max_results: int) -> list[SearchHit]:
         p = (node.findtext("pubDate") or "").strip()
         if not t or not u:
             continue
+        t = _normalize_google_rss_title(t, s)
+        s = normalize_snippet(s)
+        u = _decode_google_news_url(u)
         try:
             dt = parsedate_to_datetime(p)
             p_iso = dt.astimezone(timezone.utc).isoformat() if dt else ""
@@ -91,14 +134,43 @@ def _parse_news_rss(text: str, *, max_results: int) -> list[SearchHit]:
     return rows
 
 
+def _normalize_google_rss_title(title: str, description: str) -> str:
+    t = (title or "").strip()
+    if t and t.lower() != "google news":
+        return normalize_title(t)
+    # Some Google RSS items use "Google News" as title.
+    # Fall back to anchor text in description if available.
+    m = re.search(r"<a[^>]*>(.*?)</a>", description or "", flags=re.IGNORECASE | re.DOTALL)
+    if not m:
+        return t or "未命名"
+    anchor_text = html.unescape(re.sub(r"<[^>]+>", "", m.group(1))).strip()
+    return normalize_title(anchor_text or (t or "未命名"))
+
+
+def _decode_google_news_url(url: str) -> str:
+    raw = (url or "").strip()
+    if not raw:
+        return raw
+    host = (urlparse(raw).hostname or "").lower()
+    if "news.google.com" not in host:
+        return raw
+    try:
+        decoded = gnewsdecoder(raw, interval=1)
+        if decoded.get("status") and (decoded.get("decoded_url") or "").strip():
+            return str(decoded["decoded_url"]).strip()
+    except Exception:
+        logger.warning("google news url decode failed: %s", raw, exc_info=True)
+    return raw
+
+
 def ddgs_fallback(query: str, max_results: int) -> list[SearchHit]:
     rows: list[SearchHit] = []
     now = datetime.now(timezone.utc).isoformat()
     with DDGS(verify=False) as ddgs:
         for item in ddgs.text(query, max_results=max_results, backend="bing"):
-            title = str(item.get("title") or "").strip()
+            title = normalize_title(str(item.get("title") or "").strip())
             url = str(item.get("href") or "").strip()
-            snippet = str(item.get("body") or "").strip()
+            snippet = normalize_snippet(str(item.get("body") or "").strip())
             if not title or not url:
                 continue
             if _is_blocked_url(url):
@@ -115,9 +187,9 @@ def ddgs_primary_search(query: str, max_results: int) -> list[SearchHit]:
     now = datetime.now(timezone.utc).isoformat()
     with DDGS(verify=False) as ddgs:
         for item in ddgs.text(query, max_results=max_results, backend="bing"):
-            title = str(item.get("title") or "").strip()
+            title = normalize_title(str(item.get("title") or "").strip())
             url = str(item.get("href") or "").strip()
-            snippet = str(item.get("body") or "").strip()
+            snippet = normalize_snippet(str(item.get("body") or "").strip())
             if not title or not url:
                 continue
             if _is_blocked_url(url):

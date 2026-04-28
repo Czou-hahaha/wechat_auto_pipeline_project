@@ -4,6 +4,7 @@ from html import escape
 import mimetypes
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse
 
 import httpx
 
@@ -49,6 +50,29 @@ class WeChatDraftClient:
             raise RuntimeError(f"素材上传失败: {data}")
         return str(data.get("media_id") or "")
 
+    async def upload_cover_from_url(self, image_url: str) -> str:
+        if not (image_url or "").strip():
+            raise ValueError("image_url 为空")
+        token = await self._token()
+        async with httpx.AsyncClient(timeout=60.0, follow_redirects=True) as client:
+            img_resp = await client.get(image_url, headers={"User-Agent": "Mozilla/5.0"})
+            img_resp.raise_for_status()
+        content_type = (img_resp.headers.get("content-type") or "").split(";")[0].strip().lower()
+        ext = mimetypes.guess_extension(content_type or "") or ".jpg"
+        filename = Path(urlparse(image_url).path).name or f"cover{ext}"
+        files = {"media": (filename, img_resp.content, content_type or "image/jpeg")}
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            resp = await client.post(
+                "https://api.weixin.qq.com/cgi-bin/material/add_material",
+                params={"access_token": token, "type": "image"},
+                files=files,
+            )
+            resp.raise_for_status()
+            data = resp.json()
+        if data.get("errcode"):
+            raise RuntimeError(f"URL 封面上传失败: {data}")
+        return str(data.get("media_id") or "")
+
     async def add_draft(
         self,
         *,
@@ -59,12 +83,10 @@ class WeChatDraftClient:
     ) -> dict[str, Any]:
         token = await self._token()
         safe_summary = escape((summary or "").strip(), quote=False).replace("\n", "<br/>")
-        safe_source_url = escape((source_url or "").strip()[:500], quote=True)
         content_html = (
             f"<p>{safe_summary}</p>"
             "<p><br/></p>"
             "<p><strong>引用说明</strong>：本文为基于公开网页内容的摘要整理，仅供信息参考，不构成任何投资或决策建议。</p>"
-            f"<p><strong>原文链接</strong>：<a href=\"{safe_source_url}\">{safe_source_url}</a></p>"
         )
         payload = {
             "articles": [
