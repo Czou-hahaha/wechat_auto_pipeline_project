@@ -1,0 +1,174 @@
+{
+  "input": "/Users/corrine/Desktop/programming/Cursor/微信公众号自动化项目/V3/data/trump_xi_summit_dedupe_test_input.json",
+  "data_dir": "/Users/corrine/Desktop/programming/Cursor/微信公众号自动化项目/V3/data/dedupe_cluster_test_trump_xi",
+  "fetch_ok": 5,
+  "fetch_fail": 0,
+  "failures": [],
+  "reprint_dropped": 0,
+  "event_cluster_count": 2,
+  "cluster_report": {
+    "input_count": 5,
+    "embedding_model": "BAAI/bge-m3",
+    "reprint_threshold": 0.9,
+    "event_link_min": 0.75,
+    "reprint_groups": 5,
+    "reprint_dropped": 0,
+    "reprint_merges": [],
+    "event_link_edges": [
+      {
+        "url_a": "https://www.cnbc.com/2026/05/14/trump-xi-beijing-summit-trade-taiwan-ai-iran-rare-earths-tariffs.html",
+        "url_b": "https://www.bbc.com/news/articles/cdxpypg9dgeo",
+        "cosine": 0.79287,
+        "title_a": "Xi warns Trump Taiwan issue could jeopardize U.S.",
+        "title_b": "Trump in China: Xi Jinping welcomes US president but thorny issues remain"
+      },
+      {
+        "url_a": "https://www.bbc.com/news/articles/cdxpypg9dgeo",
+        "url_b": "https://www.businesstimes.com.sg/international/global/xi-tells-us-ceos-trump-visit-china-will-open-more",
+        "cosine": 0.82074,
+        "title_a": "Trump in China: Xi Jinping welcomes US president but thorny issues remain",
+        "title_b": "Xi tells US CEOs on Trump visit that China will open up more"
+      },
+      {
+        "url_a": "https://www.businesstimes.com.sg/international/global/xi-tells-us-ceos-trump-visit-china-will-open-more",
+        "url_b": "https://www.rfi.fr/cn/%E4%B8%AD%E5%9B%BD/20260514-%E4%B9%A0%E8%BF%91%E5%B9%B3%E5%90%91%E9%9A%8F%E7%89%B9%E6%9C%97%E6%99%AE%E8%AE%BF%E5%8D%8E%E7%9A%84%E7%BE%8E%E5%9B%BD%E4%BC%81%E4%B8%9A%E9%AB%98%E7%AE%A1%E8%A1%A8%E7%A4%BA-%E4%B8%AD%E5%9B%BD%E5%B0%86%E8%BF%9B%E4%B8%80%E6%AD%A5%E5%BC%80%E6%94%BE",
+        "cosine": 0.80813,
+        "title_a": "Xi tells US CEOs on Trump visit that China will open up more",
+        "title_b": "习近平向随特朗普访华的美国企业高管表示：中国将进一步开放"
+      }
+    ],
+    "similarity_pairs": [
+      {
+        "index_a": 0,
+        "index_b": 1,
+        "cosine": 0.79287,
+        "url_a": "https://www.cnbc.com/2026/05/14/trump-xi-beijing-summit-trade-taiwan-ai-iran-rare-earths-tariffs.html",
+        "url_b": "https://www.bbc.com/news/articles/cdxpypg9dgeo",
+        "title_a": "Xi warns Trump Taiwan issue could jeopardize U.S.",
+        "title_b": "Trump in China: Xi Jinping welcomes US president but thorny issues remain"
+      },
+      {
+        "index_a": 0,
+        "index_b": 2,
+        "cosine": 0.72984,
+        "url_a": "https://www.cnbc.com/2026/05/14/trump-xi-beijing-summit-trade-taiwan-ai-iran-rare-earths-tariffs.html",
+        "url_b": "https://www.businesstimes.com.sg/international/global/xi-tells-us-ceos-trump-visit-china-will-open-more",
+        "title_a": "Xi warns Trump Taiwan issue could jeopardize U.S.",
+        "title_b": "Xi tells US CEOs on Trump visit that China will open up more"
+      },
+      {
+        "index_a": 0,
+        "index_b": 3,
+        "cosine": 0.56513,
+        "url_a": "https://www.cnbc.com/2026/05/14/trump-xi-beijing-summit-trade-taiwan-ai-iran-rare-earths-tariffs.html",
+        "url_b": "https://www.zaobao.com.sg/news/china/story20260513-9038407",
+        "title_a": "Xi warns Trump Taiwan issue could jeopardize U.S.",
+        "title_b": "杨丹旭：特朗普访华的面子与里子"
+      },
+      {
+        "index_a": 0,
+        "index_b": 4,
+        "cosine": 0.62997,
+        "url_a": "https://www.cnbc.com/2026/05/14/trump-xi-beijing-summit-trade-taiwan-ai-iran-rare-earths-tariffs.html",
+        "url_b": "https://www.rfi.fr/cn/%E4%B8%AD%E5%9B%BD/20260514-%E4%B9%A0%E8%BF%91%E5%B9%B3%E5%90%91%E9%9A%8F%E7%89%B9%E6%9C%97%E6%99%AE%E8%AE%BF%E5%8D%8E%E7%9A%84%E7%BE%8E%E5%9B%BD%E4%BC%81%E4%B8%9A%E9%AB%98%E7%AE%A1%E8%A1%A8%E7%A4%BA-%E4%B8%AD%E5%9B%BD%E5%B0%86%E8%BF%9B%E4%B8%80%E6%AD%A5%E5%BC%80%E6%94%BE",
+        "title_a": "Xi warns Trump Taiwan issue could jeopardize U.S.",
+        "title_b": "习近平向随特朗普访华的美国企业高管表示：中国将进一步开放"
+      },
+      {
+        "index_a": 1,
+        "index_b": 2,
+        "cosine": 0.82074,
+        "url_a": "https://www.bbc.com/news/articles/cdxpypg9dgeo",
+        "url_b": "https://www.businesstimes.com.sg/international/global/xi-tells-us-ceos-trump-visit-china-will-open-more",
+        "title_a": "Trump in China: Xi Jinping welcomes US president but thorny issues remain",
+        "title_b": "Xi tells US CEOs on Trump visit that China will open up more"
+      },
+      {
+        "index_a": 1,
+        "index_b": 3,
+        "cosine": 0.68036,
+        "url_a": "https://www.bbc.com/news/articles/cdxpypg9dgeo",
+        "url_b": "https://www.zaobao.com.sg/news/china/story20260513-9038407",
+        "title_a": "Trump in China: Xi Jinping welcomes US president but thorny issues remain",
+        "title_b": "杨丹旭：特朗普访华的面子与里子"
+      },
+      {
+        "index_a": 1,
+        "index_b": 4,
+        "cosine": 0.70087,
+        "url_a": "https://www.bbc.com/news/articles/cdxpypg9dgeo",
+        "url_b": "https://www.rfi.fr/cn/%E4%B8%AD%E5%9B%BD/20260514-%E4%B9%A0%E8%BF%91%E5%B9%B3%E5%90%91%E9%9A%8F%E7%89%B9%E6%9C%97%E6%99%AE%E8%AE%BF%E5%8D%8E%E7%9A%84%E7%BE%8E%E5%9B%BD%E4%BC%81%E4%B8%9A%E9%AB%98%E7%AE%A1%E8%A1%A8%E7%A4%BA-%E4%B8%AD%E5%9B%BD%E5%B0%86%E8%BF%9B%E4%B8%80%E6%AD%A5%E5%BC%80%E6%94%BE",
+        "title_a": "Trump in China: Xi Jinping welcomes US president but thorny issues remain",
+        "title_b": "习近平向随特朗普访华的美国企业高管表示：中国将进一步开放"
+      },
+      {
+        "index_a": 2,
+        "index_b": 3,
+        "cosine": 0.6204,
+        "url_a": "https://www.businesstimes.com.sg/international/global/xi-tells-us-ceos-trump-visit-china-will-open-more",
+        "url_b": "https://www.zaobao.com.sg/news/china/story20260513-9038407",
+        "title_a": "Xi tells US CEOs on Trump visit that China will open up more",
+        "title_b": "杨丹旭：特朗普访华的面子与里子"
+      },
+      {
+        "index_a": 2,
+        "index_b": 4,
+        "cosine": 0.80813,
+        "url_a": "https://www.businesstimes.com.sg/international/global/xi-tells-us-ceos-trump-visit-china-will-open-more",
+        "url_b": "https://www.rfi.fr/cn/%E4%B8%AD%E5%9B%BD/20260514-%E4%B9%A0%E8%BF%91%E5%B9%B3%E5%90%91%E9%9A%8F%E7%89%B9%E6%9C%97%E6%99%AE%E8%AE%BF%E5%8D%8E%E7%9A%84%E7%BE%8E%E5%9B%BD%E4%BC%81%E4%B8%9A%E9%AB%98%E7%AE%A1%E8%A1%A8%E7%A4%BA-%E4%B8%AD%E5%9B%BD%E5%B0%86%E8%BF%9B%E4%B8%80%E6%AD%A5%E5%BC%80%E6%94%BE",
+        "title_a": "Xi tells US CEOs on Trump visit that China will open up more",
+        "title_b": "习近平向随特朗普访华的美国企业高管表示：中国将进一步开放"
+      },
+      {
+        "index_a": 3,
+        "index_b": 4,
+        "cosine": 0.67484,
+        "url_a": "https://www.zaobao.com.sg/news/china/story20260513-9038407",
+        "url_b": "https://www.rfi.fr/cn/%E4%B8%AD%E5%9B%BD/20260514-%E4%B9%A0%E8%BF%91%E5%B9%B3%E5%90%91%E9%9A%8F%E7%89%B9%E6%9C%97%E6%99%AE%E8%AE%BF%E5%8D%8E%E7%9A%84%E7%BE%8E%E5%9B%BD%E4%BC%81%E4%B8%9A%E9%AB%98%E7%AE%A1%E8%A1%A8%E7%A4%BA-%E4%B8%AD%E5%9B%BD%E5%B0%86%E8%BF%9B%E4%B8%80%E6%AD%A5%E5%BC%80%E6%94%BE",
+        "title_a": "杨丹旭：特朗普访华的面子与里子",
+        "title_b": "习近平向随特朗普访华的美国企业高管表示：中国将进一步开放"
+      }
+    ],
+    "preview_min_cosine": 0.55,
+    "event_count": 2,
+    "events": [
+      {
+        "event_index": 0,
+        "member_count": 4,
+        "members": [
+          {
+            "url": "https://www.cnbc.com/2026/05/14/trump-xi-beijing-summit-trade-taiwan-ai-iran-rare-earths-tariffs.html",
+            "title": "Xi warns Trump Taiwan issue could jeopardize U.S.",
+            "text_chars": 6037
+          },
+          {
+            "url": "https://www.bbc.com/news/articles/cdxpypg9dgeo",
+            "title": "Trump in China: Xi Jinping welcomes US president but thorny issues remain",
+            "text_chars": 7093
+          },
+          {
+            "url": "https://www.businesstimes.com.sg/international/global/xi-tells-us-ceos-trump-visit-china-will-open-more",
+            "title": "Xi tells US CEOs on Trump visit that China will open up more",
+            "text_chars": 3911
+          },
+          {
+            "url": "https://www.rfi.fr/cn/%E4%B8%AD%E5%9B%BD/20260514-%E4%B9%A0%E8%BF%91%E5%B9%B3%E5%90%91%E9%9A%8F%E7%89%B9%E6%9C%97%E6%99%AE%E8%AE%BF%E5%8D%8E%E7%9A%84%E7%BE%8E%E5%9B%BD%E4%BC%81%E4%B8%9A%E9%AB%98%E7%AE%A1%E8%A1%A8%E7%A4%BA-%E4%B8%AD%E5%9B%BD%E5%B0%86%E8%BF%9B%E4%B8%80%E6%AD%A5%E5%BC%80%E6%94%BE",
+            "title": "习近平向随特朗普访华的美国企业高管表示：中国将进一步开放",
+            "text_chars": 955
+          }
+        ]
+      },
+      {
+        "event_index": 1,
+        "member_count": 1,
+        "members": [
+          {
+            "url": "https://www.zaobao.com.sg/news/china/story20260513-9038407",
+            "title": "杨丹旭：特朗普访华的面子与里子",
+            "text_chars": 494
+          }
+        ]
+      }
+    ]
+  }
+}

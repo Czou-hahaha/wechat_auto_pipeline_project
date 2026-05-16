@@ -1,0 +1,92 @@
+{
+  "mode": "json_store",
+  "generated_at": "2026-05-15T14:16:19.949587+00:00",
+  "max_articles_per_event": 5,
+  "events": [
+    {
+      "event_id": "666eb4ad-9054-4ca8-8db6-8b800eadac9a",
+      "event_title": "《北京市无人驾驶航空器管理规定》今年5月1日实施 对无人驾驶航空器飞行和销售运输存储作出新规定",
+      "seed_article_count": 4,
+      "gdelt_query_profile": {
+        "plain_phrase": "北京市无人驾驶航空器管理规定今年5月1日实施 对无人驾驶航空器飞行和销售运输存储作出新规定 低空经济",
+        "search_cascade": [
+          "gdelt",
+          "google_rss",
+          "ddgs"
+        ],
+        "search_attempts_per_source": 3,
+        "expansion_search_cascade": true,
+        "web_search_backend": "gdelt",
+        "gdelt_primary_anchor": null,
+        "gdelt_chinese_query": "北京市无人驾驶航空器管理规定今年5月1日实施 对无人驾驶航空器飞行和销售运输存储作出新规定 低空经济 sourcelang:chinese",
+        "event_title_max_chars": 48,
+        "include_member_titles": false,
+        "max_or_terms": 4
+      },
+      "queries": [
+        "北京市无人驾驶航空器管理规定今年5月1日实施 对无人驾驶航空器飞行和销售运输存储作出新规定 低空经济 sourcelang:chinese"
+      ],
+      "source_trace": [
+        {
+          "source": "gdelt",
+          "query": "北京市无人驾驶航空器管理规定今年5月1日实施 对无人驾驶航空器飞行和销售运输存储作出新规定 低空经济 sourcelang:chinese",
+          "attempts": 3,
+          "hits": 0
+        },
+        {
+          "source": "google_rss",
+          "query": "北京市无人驾驶航空器管理规定今年5月1日实施 对无人驾驶航空器飞行和销售运输存储作出新规定 低空经济",
+          "attempts": 1,
+          "hits": 9
+        },
+        {
+          "source": "ddgs",
+          "query": "北京市无人驾驶航空器管理规定今年5月1日实施 对无人驾驶航空器飞行和销售运输存储作出新规定 低空经济",
+          "attempts": 1,
+          "hits": 24
+        }
+      ],
+      "gdelt_candidate_urls": [
+        "https://news.google.com/rss/articles/CBMic0FVX3lxTE5YQmhabFhQUEt1SnNLWnhwTERiczc4aFpIWWtrY1JxZElTVzVjdl8xNGh5c19aZ3NUZmtZRGJFMUg5S255VWQyMmdHcTRleFBDRkhsQ0pxR3hhSmVJV3VjWkVjZTd0bFRCSWpMSDN6R1Rqb2s?oc=5",
+        "https://news.google.com/rss/articles/CBMifkFVX3lxTE1YYTEyYTlCcHpmcmNnSVRjMDFFY0hIOWdRWEtqVG5rSXI5cG5zUHdmT0dneGFVZC1ramJLbnd6bkcyVmxDT1FjZ3ZVM3FfNzIxQ0NPeGRNbVJnczZrNjd2X1VaVEQ4cFllSlNVVnB0V0hNcHM1TERIMXlORkhodw?oc=5",
+        "https://news.google.com/rss/articles/CBMiYkFVX3lxTE1RWWY0TXVqV2diY2NGRVBuZGwyWDBWSXRRVkJ3Ym9tV2l3MlctMl96a2lvOXpyR2pKaFIxamEwd2ZLOEVYdTVPcnpEdnM0cklnY2JQc3p3dlphYUdJcVdGUjlB?oc=5",
+        "https://news.google.com/rss/articles/CBMi_ANBVV95cUxOOHVCUXlEcTNUX1dUVlExMURBQ0UzT3dUSUVmT3ZwMEd3bFd5VmxXQ3ktMVhGSy15ZjA5aWIyVkFJQXI3UkgzU1E1M29wdlZsQ3dSYXh0OW1WbjJTNm8xUWtqNW80YmlGY2NzbmsxZGZBWWVWSktGNU1mdVVzbWlnYUZoZS1zZ0FGNG1lRGc5MUtIN09tNzlOdlVpLVRtNzRvLXRzVlFlMTE2YmVtQXFIcWx0dUZWeTRqYXFCSWt3cXB3cjlWS29iOU9oR2Q0NGkwR2lsMmZIVmhjQklxdDVwOXkyZXhEVFZGOWxPNXByNXpKaEJ4dzNxczN3LXVhd3Y4Wm8tdHV6UVdQQl9KcV9tcXQyb0VGbXBOX21hQ2pMZERjWmpGcmVyWFQtTUdTZVNUcEh1cTVJUXQxX0V2UGlueHZSVlhQSm9yOE1wQkg1TDJMWXJCcjBEaXlMeVYyaFJXWnkwSWZGdnMwLVFiY1g2bzlfNXI0WHo0LXI2VFRLUTFuekdlTHBWY25QWUU5MjZBLU9nR2NJMlg2c3lsOEREbDhKaXNQX2hsNGtMbG1nNjdjM0MybWF1enF0S2kyNDdnRzR6Zi14U1BfeUg0VUIzRTJqcVJTZEVaem5EY0F4OGhqQTgwLWxiLTllOWNxSWRhNjlYczI3YkhRQjd5?oc=5",
+        "https://news.google.com/rss/articles/CBMiVkFVX3lxTE9HcDlXMHJUN0VOTHJtZjloSWxIcDhFTTlnSVNIZHJFS2UyRUlaYnF4ZlhkNV9Ic1BaMkhVTGYwb3RPQzRJdjVoVkNLbEdueWxJOEZUcEdR?oc=5",
+        "https://news.google.com/rss/articles/CBMi1gJBVV95cUxQOXRIcHB0eW96NHYwSmNMbjQxdDlSazV1azM0cWZGR1JvbnNpSi10V2lIVFZ4b1hlZEM3WGl6TUJpZWcwNTFMVTRXLW9CM01oMllMMWUtSV9weWNZVEVydWFFbWtXSVpjRFFxNXF2RVNVZlJ5Yk05SHRxX0pvdjhocmFCaXdvSE1fS3FLYktZTFpqb2d2UXhNcWJXQmdoc01uQmdRbk9uWE5WVkNmc1ZqT3RGRmJxQWdTZElVRWdwVUtpTUVzbnNJamJtcWVpSXcxdGFVRXhiWjJYZF9wQVI2OHlrbU5MSFVJdEZGQU9OdUk4TDBKRnlaSWI0T0xXdFVqMVBvMUtfM3NnWUlzamxoM29aTW9YRFI1eVJuU09xNWpDRnNJYnlodXVrdENpV2VXam5EOUl5Q1JETHFNLU9RM1kwWXlOemVYTm55NXE2UHZTc0Fua1E?oc=5",
+        "https://news.google.com/rss/articles/CBMiYEFVX3lxTE1fQ2UzeVNDdEczUnNaUUJhMWlEMnpnLWFMNl9kSVkwb3g0RVFZeDFUOERFc1Y4Z29qOWR0WjlGSTdheVJfaUtzOFEtX0hNNG85UDJoVXA0YnpvWWZIaFdpeNIBZkFVX3lxTFA5OHRvQUxRb3FFZXRORFA0WG1SU3JlVnZYOUZQR3ZIaVFMelNUbGFsaVVVWnNvNG9hLWZHZlpfLWJ2U3FKRGM2TnFqeVczcDN2SGFieGNQTU90am53Vl9LREZwdS1HZw?oc=5",
+        "https://news.google.com/rss/articles/CBMiVkFVX3lxTE1faExDY1RxX3M1R2ZvNnNmZW1GWjZhVlBRQmEzR1duV3lsTDh1Y3pObHlqand0bXl6NFQ0aHYtMVVlNkNkRXNEWWdQNEFGekJkNDZXb3ZB?oc=5",
+        "https://news.google.com/rss/articles/CBMiZkFVX3lxTE5tai1nOEN0Y3dLSkRabnRMLXRncExMejhwQjB1RVNSN0RoYW5JU3g2UHVSWnVfT3Vjb0p6NzMxdXNZNWNGTVMzOHlneVB5cE1ZbVFzTmFoVy1EdDVNU19nQ3ZCd1JWdw?oc=5",
+        "https://bing.weeklyquiz.net/bing-homepage-quiz/",
+        "https://bingquizzes.com/bing-homepage-quiz/",
+        "https://popularnowonbing.com/bing-homepage-quiz/",
+        "https://bingquiz.org/bing-homepage-quiz/",
+        "https://www.wikihow.com/Play-Bing-Homepage-Quiz",
+        "https://www.quizinside.com/bing-homepage-quiz/",
+        "https://www.geeksdigit.com/bing-homepage-quiz/",
+        "https://www.digitalcitizen.life/how-to-play-the-bing-homepage-quiz-and-earn-rewards/",
+        "https://axeetech.com/how-to-play-bing-homepage-quiz/",
+        "https://binghomepagequiiz.com/",
+        "https://www.21jingji.com/article/20260429/herald/bccf00b641997d3dc7d6444e0ffce7d5.html",
+        "https://post.smzdm.com/p/a0353m9r/",
+        "https://www.caac.gov.cn/XXGK/XXGK/TZTG/202603/P020260306730349409250.pdf",
+        "http://paper.people.com.cn/rmrb/images/2023-06/29/17/rmrb2023062917.pdf",
+        "https://m.bj.bendibao.com/news/356542.html",
+        "https://www.chinanews.com.cn/aseaninfo/2026/05-14/10621352.shtml",
+        "https://www.kwcg.ca/forum/index.php?id=1527773",
+        "https://aiqicha.baidu.com/",
+        "https://www.bbc.com/zhongwen/simp/world-49800202",
+        "https://www.shanghai.gov.cn/cmsres/e2/e2e47877f08a4b878fddd191068c26f7/14ef45d670de55fec17372bdfba5adae.pdf",
+        "https://www.ithome.com/0/872/656.htm",
+        "https://www.youtube.com/watch?v=fN9uYWCjQaw",
+        "https://ehang.com/",
+        "https://news.dayoo.com/society/202605/12/140000_54958538.htm"
+      ],
+      "status": "success",
+      "urls_passed_similarity": [],
+      "urls_added_to_store": [],
+      "candidates_fetched": 33,
+      "articles_inserted": 0,
+      "similarity_threshold": 0.8
+    }
+  ]
+}

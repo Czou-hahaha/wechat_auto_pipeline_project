@@ -1,0 +1,28 @@
+{
+  "note": "由 tests/integration/run_event_enhancement_fixture.py + tests/data/dedupe_runs/beijing 复制到 history_fixture_latest2 后生成（JSON 模式，无 PG）。",
+  "work_dir": "V3/tests/data/event_enhancement_runs/history_fixture_latest2",
+  "last_run_json": "V3/tests/data/event_enhancement_runs/history_fixture_latest2/event_enhancement_last_run.json",
+  "generated_at": "2026-05-15T16:56:32.211447+00:00",
+  "event_id": "666eb4ad-9054-4ca8-8db6-8b800eadac9a",
+  "plain_phrase": "北京市无人驾驶航空器管理规定今 低空经济",
+  "source_trace_summary": {
+    "gdelt_hits": 0,
+    "google_rss_hits": 40,
+    "ddgs_hits": 31
+  },
+  "articles_inserted": 1,
+  "urls_added_to_store": [
+    "https://www.beijing.gov.cn/zhengce/dfxfg/202604/t20260418_4591842.html"
+  ],
+  "top_similarity": {
+    "url": "https://www.beijing.gov.cn/zhengce/dfxfg/202604/t20260418_4591842.html",
+    "similarity": 0.8848,
+    "title": "北京市无人驾驶航空器管理规定_地方性法规_首都之窗_北京市人民政府门..."
+  },
+  "similarity_threshold": 0.7,
+  "candidates_fetched": 42,
+  "environment_notes": [
+    "GDELT 当次返回空（日志含 gdelt unexpected payload keys=[]）；联路仍经 Google News RSS → DDGS。",
+    "大量 Google 包装链在短时内调用 googlenewsdecoder 可能 429；已加强外链过滤（排除 analytics.js 等）并在 RSS 解码使用 interval=1s；URL 去跟踪参数见 google_news_url._strip_google_news_article_tracking。"
+  ]
+}

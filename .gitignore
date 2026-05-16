@@ -1,0 +1,39 @@
+# Secrets
+.env
+.env.local
+**/.env
+!**/.env.example
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.venv/
+venv/
+
+# V3 runtime data (keep demo/)
+V3/data/*.json
+!V3/data/demo/
+V3/data/*.jsonl
+V3/data/wechat_thumb_test.jpg
+
+# Node / Next.js
+platform/node_modules/
+platform/.next/
+platform/out/
+npm-debug.log*
+
+# OS / IDE
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# Local archives (not part of V3 release)
+V1/
+V2/
+his/
+项目PRD/
+.cursor/

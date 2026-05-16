@@ -1,0 +1,67 @@
+# 事件增强（Event Enhancement）— 低空经济情报扩搜 MVP
+
+important_hosts:
+  - reuters.com
+  - faa.gov
+  - caac.gov.cn
+  - gov.cn
+
+keywords:
+  - 低空
+  - 无人机
+  - eVTOL
+  - UAM
+  - 通航
+
+# 领域锚词；扩搜默认只取其中一条中文主锚（见 gdelt_primary_anchor）
+anchor_terms:
+  - 低空经济
+  - drone
+  - eVTOL
+
+# 三级联扩搜：GDELT（中文）→ Google News RSS → DDGS；有成功入库则不再试后续源
+expansion_search_cascade: true
+# 单源「始终无结果」时的最大轮数（每轮 GDELT 内部仍有 max_retries 次 HTTP 重试）
+search_attempts_per_source: 3
+
+# 扩搜后端：仅 expansion_search_cascade 为 false 时使用 gdelt | ddgs
+web_search_backend: gdelt
+# 非空时强制作为主锚词与「截断事件名」做 AND；省略则自动选 anchor_terms 中首条含中文，否则首条
+# gdelt_primary_anchor: 低空经济
+
+max_events_per_run: 3
+# 单个事件在 PG 中关联的稿件数上限（EventArticleMap 条数）；达到后不再扩搜入库，且不删已有 Article/JSON 行
+max_articles_per_event: 5
+expansion_ranking_window_hours: 48
+expansion_ranking_timezone: Asia/Shanghai
+expansion_min_interval_hours: 0
+
+# 事件标题参与检索词的最大字符数（Unicode）；与「主锚」空格拼接，去掉《》等符号
+gdelt_event_title_max_chars: 15
+# true 时把成员稿标题拼进 blurb（旧行为，易超长）；false 只用截断后的事件标题 + 锚词
+gdelt_query_include_member_titles: false
+# 兼容字段（旧 OR 组句）；当前扩搜为「事件名 + 主锚」纯文本，此项不参与组句
+gdelt_query_max_or_terms: 4
+
+gdelt:
+  timespan: "12h"
+  max_records: 40
+  max_concurrent: 2
+  min_interval_sec: 1.5
+  backoff_base_sec: 2.0
+  backoff_max_sec: 60.0
+  jitter_sec: 1.0
+  # 单次 HTTP 失败（含非 JSON/429）最多重试次数，用尽后返回空结果
+  max_retries: 3
+
+similarity_threshold: 0.70
+embedding_max_input_chars: 8000
+http_fetch_timeout_sec: 45.0
+trafilatura_min_chars: 80
+
+user_agents:
+  - Mozilla/5.0 (compatible; EventEnhancement/1.0; +https://example.invalid)
+  - Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36
+
+# 可选：附加 domain: 子查询数量上限（0=不追加）
+expansion_domains: []

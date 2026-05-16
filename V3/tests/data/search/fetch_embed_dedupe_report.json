@@ -1,0 +1,48 @@
+{
+  "max_article_age_hours": 14,
+  "note_age_window": "与 run_once 相同：filter_by_age(..., MAX_ARTICLE_AGE_HOURS)；缺 published_at 的条目在 filter_by_age 中仍可能保留。",
+  "rss_raw": 29,
+  "gdelt_rows": 0,
+  "gdelt_http_requests": 6,
+  "merged_unique": 29,
+  "after_age_filter": 3,
+  "fetch_cap": 2,
+  "search_elapsed_sec": 138.28,
+  "embedding_enabled": false,
+  "embedding_model": "text-embedding-3-small",
+  "embedding_dedupe_threshold": 0.92,
+  "fetch_elapsed_sec": 0.53,
+  "fetch_ok": 2,
+  "fetch_failed": 0,
+  "after_embedding_dedupe": 2,
+  "embedding_dropped_pairs": [],
+  "embedding_skip_reason": "EMBEDDING_ENABLED=false or EMBEDDING_API_KEY empty — 仅全文拉取，未做向量去重。",
+  "articles": [
+    {
+      "url": "https://dronedj.com/2026/05/12/dji-autel-drone-ban-fcc/",
+      "title": "If DJI drones are so dangerous, why are they still flying in US?",
+      "search_published_at": "2026-05-12T07:54:21+00:00",
+      "page_published_at": "2026-05-12T07:54:21+00:00",
+      "page_date_only": false,
+      "final_url": "https://dronedj.com/2026/05/12/dji-autel-drone-ban-fcc/",
+      "text_chars": 10780,
+      "text_preview": "9to5Google Logo 9to5Google\nDJI DJI Mavic Air 2 DJI Mavic Mini DJI Mini 2 DJI Mavic 2 Zoom and Pro DJI Inspire DJI Mavic Pro DJI Phantom 4 DJI Spark\nIf DJI and Autel Robotics drones truly pose an immediate national security threat, then why are thousands of them still flying over America every single day?\nThat’s the uncomfortable question now being thrown directly at the Federal Communications Comm",
+      "ok": true,
+      "elapsed_sec": 0.526,
+      "first_image_url": "https://dronedj.com/wp-content/uploads/sites/2/2025/01/drone-fly-drunk-drinking-legal-fine-faa.jpg?quality=82&strip=all&w=1600"
+    },
+    {
+      "url": "https://dronedj.com/2026/05/11/dji-new-firmware-update-drone/",
+      "title": "DJI rolls out fresh firmware updates for Mavic, Mini, Air drones",
+      "search_published_at": "2026-05-12T05:48:00+00:00",
+      "page_published_at": "2026-05-12T05:48:00+00:00",
+      "page_date_only": false,
+      "final_url": "https://dronedj.com/2026/05/11/dji-new-firmware-update-drone/",
+      "text_chars": 5903,
+      "text_preview": "9to5Google Logo 9to5Google\nDJI DJI Mavic Air 2 DJI Mavic Mini DJI Mini 2 DJI Mavic 2 Zoom and Pro DJI Inspire DJI Mavic Pro DJI Phantom 4 DJI Spark\nAs DJI continues navigating uncertainty in the US market, the company is still keeping its global consumer drone lineup fresh with a new wave of spring firmware updates for several flagship products. The latest releases cover the new DJI Mavic 4 Pro, t",
+      "ok": true,
+      "elapsed_sec": 0.422,
+      "first_image_url": "https://dronedj.com/wp-content/uploads/sites/2/2025/05/Mavic-4-Pro_Lifestyle-KV_Spin-Your-World1.jpg?quality=82&strip=all&w=1600"
+    }
+  ]
+}

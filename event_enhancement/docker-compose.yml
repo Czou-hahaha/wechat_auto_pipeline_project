@@ -1,0 +1,14 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: event_enh
+      POSTGRES_PASSWORD: event_enh
+      POSTGRES_DB: event_enhancement
+    ports:
+      - "5433:5432"
+    volumes:
+      - event_enh_pgdata:/var/lib/postgresql/data
+
+volumes:
+  event_enh_pgdata:

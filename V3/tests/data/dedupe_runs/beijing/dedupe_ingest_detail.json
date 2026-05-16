@@ -1,0 +1,150 @@
+{
+  "input": "/Users/corrine/Desktop/programming/Cursor/微信公众号自动化项目/V3/data/beijing_drone_dedupe_test_input.json",
+  "data_dir": "/Users/corrine/Desktop/programming/Cursor/微信公众号自动化项目/V3/data/dedupe_cluster_test_beijing",
+  "fetch_ok": 4,
+  "fetch_fail": 1,
+  "failures": [
+    {
+      "url": "https://www.mps.gov.cn/n2256342/n6594994/c10434566/content.html",
+      "title": "公安部-无人驾驶航空器管理相关通告（测试占位标题）",
+      "published_at": "2026-04-01T00:00:00+00:00",
+      "ok": false,
+      "error": "HTTPStatusError: Server error '521 ' for url 'https://www.mps.gov.cn/n2256342/n6594994/c10434566/content.html'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/521",
+      "elapsed_sec": 0.346
+    }
+  ],
+  "reprint_dropped": 0,
+  "event_cluster_count": 1,
+  "cluster_report": {
+    "input_count": 4,
+    "embedding_model": "BAAI/bge-m3",
+    "reprint_threshold": 0.9,
+    "event_link_min": 0.75,
+    "reprint_groups": 4,
+    "reprint_dropped": 0,
+    "reprint_merges": [],
+    "event_link_edges": [
+      {
+        "url_a": "https://www.rfi.fr/cn/%E4%B8%AD%E5%9B%BD/20260429-%E6%97%A0%E4%BA%BA%E6%9C%BA%E7%A5%9E%E5%87%BA%E9%AC%BC%E6%B2%A1-%E5%8C%97%E4%BA%AC%E7%A5%AD%E5%87%BA%E6%9C%80%E4%B8%A5%E6%96%B0%E8%A7%84%E7%A6%81%E9%A3%9E%E7%A6%81%E5%94%AE",
+        "url_b": "https://www.beijing.gov.cn/fuwu/bmfw/sy/jrts/202604/t20260427_4617643.html",
+        "cosine": 0.80611,
+        "title_a": "无人机神出鬼没 北京祭出最严新规禁飞禁售",
+        "title_b": "@所有无人驾驶航空器爱好者，这份提示请收好"
+      },
+      {
+        "url_a": "https://www.rfi.fr/cn/%E4%B8%AD%E5%9B%BD/20260429-%E6%97%A0%E4%BA%BA%E6%9C%BA%E7%A5%9E%E5%87%BA%E9%AC%BC%E6%B2%A1-%E5%8C%97%E4%BA%AC%E7%A5%AD%E5%87%BA%E6%9C%80%E4%B8%A5%E6%96%B0%E8%A7%84%E7%A6%81%E9%A3%9E%E7%A6%81%E5%94%AE",
+        "url_b": "https://www.zaobao.com.sg/news/china/story20260328-8807386",
+        "cosine": 0.87744,
+        "title_a": "无人机神出鬼没 北京祭出最严新规禁飞禁售",
+        "title_b": "北京成中国首个禁售禁运并禁飞无人机城市"
+      },
+      {
+        "url_a": "https://www.beijing.gov.cn/fuwu/bmfw/sy/jrts/202604/t20260427_4617643.html",
+        "url_b": "https://www.zaobao.com.sg/news/china/story20260328-8807386",
+        "cosine": 0.84169,
+        "title_a": "@所有无人驾驶航空器爱好者，这份提示请收好",
+        "title_b": "北京成中国首个禁售禁运并禁飞无人机城市"
+      },
+      {
+        "url_a": "https://www.beijing.gov.cn/fuwu/bmfw/sy/jrts/202604/t20260427_4617643.html",
+        "url_b": "https://www.bjrd.gov.cn/rdzl/rdzc/fgjd/202604/t20260410_4579143.html",
+        "cosine": 0.8077,
+        "title_a": "@所有无人驾驶航空器爱好者，这份提示请收好",
+        "title_b": "《北京市无人驾驶航空器管理规定》今年5月1日实施 对无人驾驶航空器飞行和销售运输存储作出新规定"
+      },
+      {
+        "url_a": "https://www.zaobao.com.sg/news/china/story20260328-8807386",
+        "url_b": "https://www.bjrd.gov.cn/rdzl/rdzc/fgjd/202604/t20260410_4579143.html",
+        "cosine": 0.79497,
+        "title_a": "北京成中国首个禁售禁运并禁飞无人机城市",
+        "title_b": "《北京市无人驾驶航空器管理规定》今年5月1日实施 对无人驾驶航空器飞行和销售运输存储作出新规定"
+      }
+    ],
+    "similarity_pairs": [
+      {
+        "index_a": 0,
+        "index_b": 1,
+        "cosine": 0.80611,
+        "url_a": "https://www.rfi.fr/cn/%E4%B8%AD%E5%9B%BD/20260429-%E6%97%A0%E4%BA%BA%E6%9C%BA%E7%A5%9E%E5%87%BA%E9%AC%BC%E6%B2%A1-%E5%8C%97%E4%BA%AC%E7%A5%AD%E5%87%BA%E6%9C%80%E4%B8%A5%E6%96%B0%E8%A7%84%E7%A6%81%E9%A3%9E%E7%A6%81%E5%94%AE",
+        "url_b": "https://www.beijing.gov.cn/fuwu/bmfw/sy/jrts/202604/t20260427_4617643.html",
+        "title_a": "无人机神出鬼没 北京祭出最严新规禁飞禁售",
+        "title_b": "@所有无人驾驶航空器爱好者，这份提示请收好"
+      },
+      {
+        "index_a": 0,
+        "index_b": 2,
+        "cosine": 0.87744,
+        "url_a": "https://www.rfi.fr/cn/%E4%B8%AD%E5%9B%BD/20260429-%E6%97%A0%E4%BA%BA%E6%9C%BA%E7%A5%9E%E5%87%BA%E9%AC%BC%E6%B2%A1-%E5%8C%97%E4%BA%AC%E7%A5%AD%E5%87%BA%E6%9C%80%E4%B8%A5%E6%96%B0%E8%A7%84%E7%A6%81%E9%A3%9E%E7%A6%81%E5%94%AE",
+        "url_b": "https://www.zaobao.com.sg/news/china/story20260328-8807386",
+        "title_a": "无人机神出鬼没 北京祭出最严新规禁飞禁售",
+        "title_b": "北京成中国首个禁售禁运并禁飞无人机城市"
+      },
+      {
+        "index_a": 0,
+        "index_b": 3,
+        "cosine": 0.74391,
+        "url_a": "https://www.rfi.fr/cn/%E4%B8%AD%E5%9B%BD/20260429-%E6%97%A0%E4%BA%BA%E6%9C%BA%E7%A5%9E%E5%87%BA%E9%AC%BC%E6%B2%A1-%E5%8C%97%E4%BA%AC%E7%A5%AD%E5%87%BA%E6%9C%80%E4%B8%A5%E6%96%B0%E8%A7%84%E7%A6%81%E9%A3%9E%E7%A6%81%E5%94%AE",
+        "url_b": "https://www.bjrd.gov.cn/rdzl/rdzc/fgjd/202604/t20260410_4579143.html",
+        "title_a": "无人机神出鬼没 北京祭出最严新规禁飞禁售",
+        "title_b": "《北京市无人驾驶航空器管理规定》今年5月1日实施 对无人驾驶航空器飞行和销售运输存储作出新规定"
+      },
+      {
+        "index_a": 1,
+        "index_b": 2,
+        "cosine": 0.84169,
+        "url_a": "https://www.beijing.gov.cn/fuwu/bmfw/sy/jrts/202604/t20260427_4617643.html",
+        "url_b": "https://www.zaobao.com.sg/news/china/story20260328-8807386",
+        "title_a": "@所有无人驾驶航空器爱好者，这份提示请收好",
+        "title_b": "北京成中国首个禁售禁运并禁飞无人机城市"
+      },
+      {
+        "index_a": 1,
+        "index_b": 3,
+        "cosine": 0.8077,
+        "url_a": "https://www.beijing.gov.cn/fuwu/bmfw/sy/jrts/202604/t20260427_4617643.html",
+        "url_b": "https://www.bjrd.gov.cn/rdzl/rdzc/fgjd/202604/t20260410_4579143.html",
+        "title_a": "@所有无人驾驶航空器爱好者，这份提示请收好",
+        "title_b": "《北京市无人驾驶航空器管理规定》今年5月1日实施 对无人驾驶航空器飞行和销售运输存储作出新规定"
+      },
+      {
+        "index_a": 2,
+        "index_b": 3,
+        "cosine": 0.79497,
+        "url_a": "https://www.zaobao.com.sg/news/china/story20260328-8807386",
+        "url_b": "https://www.bjrd.gov.cn/rdzl/rdzc/fgjd/202604/t20260410_4579143.html",
+        "title_a": "北京成中国首个禁售禁运并禁飞无人机城市",
+        "title_b": "《北京市无人驾驶航空器管理规定》今年5月1日实施 对无人驾驶航空器飞行和销售运输存储作出新规定"
+      }
+    ],
+    "preview_min_cosine": 0.55,
+    "event_count": 1,
+    "events": [
+      {
+        "event_index": 0,
+        "member_count": 4,
+        "members": [
+          {
+            "url": "https://www.rfi.fr/cn/%E4%B8%AD%E5%9B%BD/20260429-%E6%97%A0%E4%BA%BA%E6%9C%BA%E7%A5%9E%E5%87%BA%E9%AC%BC%E6%B2%A1-%E5%8C%97%E4%BA%AC%E7%A5%AD%E5%87%BA%E6%9C%80%E4%B8%A5%E6%96%B0%E8%A7%84%E7%A6%81%E9%A3%9E%E7%A6%81%E5%94%AE",
+            "title": "无人机神出鬼没 北京祭出最严新规禁飞禁售",
+            "text_chars": 826
+          },
+          {
+            "url": "https://www.beijing.gov.cn/fuwu/bmfw/sy/jrts/202604/t20260427_4617643.html",
+            "title": "@所有无人驾驶航空器爱好者，这份提示请收好",
+            "text_chars": 905
+          },
+          {
+            "url": "https://www.zaobao.com.sg/news/china/story20260328-8807386",
+            "title": "北京成中国首个禁售禁运并禁飞无人机城市",
+            "text_chars": 537
+          },
+          {
+            "url": "https://www.bjrd.gov.cn/rdzl/rdzc/fgjd/202604/t20260410_4579143.html",
+            "title": "《北京市无人驾驶航空器管理规定》今年5月1日实施 对无人驾驶航空器飞行和销售运输存储作出新规定",
+            "text_chars": 3132
+          }
+        ]
+      }
+    ]
+  }
+}

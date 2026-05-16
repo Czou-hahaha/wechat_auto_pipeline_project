@@ -1,0 +1,11 @@
+.env
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.DS_Store
+data/*.json
+data/*.jsonl
+data/wechat_thumb_test.jpg
+agent-tools/

@@ -1,0 +1,29 @@
+{
+  "mode": "json_store",
+  "generated_at": "2026-05-15T13:33:22.077586+00:00",
+  "max_articles_per_event": 5,
+  "events": [
+    {
+      "event_id": "666eb4ad-9054-4ca8-8db6-8b800eadac9a",
+      "event_title": "《北京市无人驾驶航空器管理规定》今年5月1日实施 对无人驾驶航空器飞行和销售运输存储作出新规定",
+      "seed_article_count": 4,
+      "gdelt_query_profile": {
+        "web_search_backend": "gdelt",
+        "gdelt_primary_anchor": null,
+        "event_title_max_chars": 15,
+        "include_member_titles": false,
+        "max_or_terms": 4
+      },
+      "queries": [
+        "(低空经济) AND (《北京市无人驾驶航空器管理规定) sourcelang:chinese"
+      ],
+      "gdelt_candidate_urls": [],
+      "status": "success",
+      "urls_passed_similarity": [],
+      "urls_added_to_store": [],
+      "candidates_fetched": 0,
+      "articles_inserted": 0,
+      "similarity_threshold": 0.8
+    }
+  ]
+}

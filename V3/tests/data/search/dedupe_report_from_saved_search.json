@@ -1,0 +1,290 @@
+{
+  "meta": {
+    "generated_at": "2026-05-14T01:13:34.696005+00:00",
+    "input_path": "/Users/corrine/Desktop/programming/Cursor/微信公众号自动化项目/V3/data/test_search_results.json",
+    "output_path": "/Users/corrine/Desktop/programming/Cursor/微信公众号自动化项目/V3/data/dedupe_report_from_saved_search.json",
+    "input_hits": 7,
+    "fetch_ok": 7,
+    "fetch_fail": 0,
+    "fetch_elapsed_sec": 1.76,
+    "trafilatura_enabled": true,
+    "embedding_backend": "local",
+    "embedding_model": "BAAI/bge-m3",
+    "note": "默认本机向量：EMBEDDING_BACKEND=local + BAAI/bge-m3，无需 API KEY；远程 OpenAI 兼容接口请设 EMBEDDING_BACKEND=http 并配置 KEY。",
+    "summary_markdown_path": "/Users/corrine/Desktop/programming/Cursor/微信公众号自动化项目/V3/data/dedupe_report_from_saved_search_阅读摘要.md"
+  },
+  "fetch_failures": [],
+  "fetch_success": [
+    {
+      "url": "https://spectrum.ieee.org/evtol-joby-jon-wagner-motors",
+      "title": "The Hidden Tradeoffs Powering Joby’s eVTOL Motors",
+      "final_url": "https://spectrum.ieee.org/evtol-joby-jon-wagner-motors",
+      "published_at": "2026-04-27T13:00:01+00:00",
+      "page_published_at": "2026-04-27T13:00:01+00:00",
+      "text_chars": 3702,
+      "text_preview": "Electric vehicles, whether they’re cars on the road or electric vertical take-off and landing (eVTOL) aircraft, are built around similar electric motors. But there are vital differences including component costs, mass, and redundancy.\nJon Wagner spent five years as the senior director of battery engineering for Tesla before joining California-based eVTOL developer Joby Aviation in 2017. He spoke with IEEE Spectrum about how engineering differs between cars and aircraft.\nJon Wagner\nJon Wagner lea",
+      "elapsed_sec": 0.918
+    },
+    {
+      "url": "https://36kr.com/p/3805672617959173?f=rss",
+      "title": "36氪首发｜新加坡博士团队创业获种子轮融资，首款产品做“会飞的家庭管家”",
+      "final_url": "https://36kr.com/p/3805672617959173?f=rss",
+      "published_at": "2026-05-12T19:12:38+00:00",
+      "page_published_at": "2026-05-14T01:13:26+00:00",
+      "text_chars": 2018,
+      "text_preview": "36氪首发｜新加坡博士团队创业获种子轮融资，首款产品做“会飞的家庭管家”\n作者 | 乔钰杰\n编辑 | 袁斯来\n硬氪获悉，深圳熵约智能科技有限公司（下称“熵约科技”）日前完成数百万美元种子轮融资，本轮融资由初心资本独家投资。\n熵约科技由新加坡南洋理工大学博士曾武，马来西亚理科大学博士况伟杰，清华智能产业研究院研究员万浩诚共同创立，核心团队成员来自清华大学、华中科技大学，南京航空航天大学，字节跳动，比亚迪等高校和企业，背景覆盖人工智能、理论物理与微型无人机系统。\n目前，熵约科技的首款产品针对家庭空间设计，为全球首款家庭飞行机器人Flyer O1。\n（图源/企业）\n曾武介绍称：“家庭环境中，地面环境其实是多障碍的，设备活动受限；而空中空间相对开阔，因此我们选择从飞行形态切入。”\nFlyer O1主要面向欧美家庭市场，针对多成员、居住空间较大的家庭设计，定位为“智能管家”。产品无需遥控，可在用户规定区域自主巡航并在感知异动，或在用户远程调度时完成巡查与任务执行。功能涵盖家庭成员日程识别与协调、卫生状态巡检、物品缺失识别以及多设备联动，并支持语音交互。\n在具体应用中，Flyer O1可通过持续使",
+      "elapsed_sec": 0.604
+    },
+    {
+      "url": "https://dronedj.com/2026/05/12/dji-autel-drone-ban-fcc/",
+      "title": "If DJI drones are so dangerous, why are they still flying in US?",
+      "final_url": "https://dronedj.com/2026/05/12/dji-autel-drone-ban-fcc/",
+      "published_at": "2026-05-12T07:54:21+00:00",
+      "page_published_at": "2026-05-12T07:54:21+00:00",
+      "text_chars": 9472,
+      "text_preview": "If DJI and Autel Robotics drones truly pose an immediate national security threat, then why are thousands of them still flying over America every single day?\nThat’s the uncomfortable question now being thrown directly at the Federal Communications Commission (FCC) as the agency’s public comment window on foreign-made drones officially closes.\nIn a detailed filing, the Drone Service Provider’s Alliance (DSPA) argues that Washington’s current approach to DJI and Autel drones contains a major contr",
+      "elapsed_sec": 0.658
+    },
+    {
+      "url": "https://www.suasnews.com/2026/05/is-the-uks-raef-and-sail-marking-system-becoming-an-expensive-double-check-on-drone-manufacturers/",
+      "title": "Is the UK’s RAE(F) and SAIL Marking System Becoming an Expensive Double",
+      "final_url": "https://www.suasnews.com/2026/05/is-the-uks-raef-and-sail-marking-system-becoming-an-expensive-double-check-on-drone-manufacturers/",
+      "published_at": "2026-05-12T18:57:14+00:00",
+      "page_published_at": "2026-05-12T18:57:14+00:00",
+      "text_chars": 9409,
+      "text_preview": "Is the UK’s RAE(F) and SAIL Marking System Becoming an Expensive Double-Check on Drone Manufacturers?\nThe UK Civil Aviation Authority’s introduction of the Recognised Assessment Entity for Flightworthiness, or RAE(F), and the associated SAIL Marking system was presented as a way to support the rollout of UK SORA and help operators demonstrate that their unmanned aircraft systems are safe for more complex Specific Category operations.\nIn principle, few people in the drone industry would object to",
+      "elapsed_sec": 0.861
+    },
+    {
+      "url": "https://www.suasnews.com/2026/05/cubepilot-france-embedded-safety-critical-software-engineer/",
+      "title": "CubePilot France – Embedded & Safety Critical Software Engineer – sUAS News",
+      "final_url": "https://www.suasnews.com/2026/05/cubepilot-france-embedded-safety-critical-software-engineer/",
+      "published_at": "2026-05-12T14:00:05+00:00",
+      "page_published_at": "2026-05-12T14:00:05+00:00",
+      "text_chars": 2313,
+      "text_preview": "CubePilot France – Embedded & Safety Critical Software Engineer\nCubePilot provides Hardware and Embedded software ecosystem for the ever-evolving Civilian Unmanned Systems Industry. With Open Source and Community as the soul, Reliability and Quality as the character, CubePilot has been continually bringing premium hardware to the market. CubePilot Ecosystem currently consists of Cube Autopilot range serving as the core with variety of accessories and ecosystem equipments.\nCubePilot has expanded ",
+      "elapsed_sec": 0.991
+    },
+    {
+      "url": "https://www.suasnews.com/2026/05/airbility-signs-strategic-mou-with-germanys-schubeler-onedf-propulsion-technology-for-evtol-platforms/",
+      "title": "Airbility Signs Strategic MoU with Germany’s Schübeler onEDF Propulsion Technology for eVTOL Platforms – sUAS News",
+      "final_url": "https://www.suasnews.com/2026/05/airbility-signs-strategic-mou-with-germanys-schubeler-onedf-propulsion-technology-for-evtol-platforms/",
+      "published_at": "2026-05-12T13:53:14+00:00",
+      "page_published_at": "2026-05-12T13:53:14+00:00",
+      "text_chars": 3076,
+      "text_preview": "Airbility Signs Strategic MoU with Germany’s Schübeler onEDF Propulsion Technology for eVTOL Platforms\nPartners to jointly develop next-generation EDF propulsion systems and pursue Korea–Germany international R&D programs\nAirbility Inc. (“Airbility”), an advanced air mobility company based in the Republic of Korea, announced that it has signed a Memorandum of Understanding (MoU) with Schübeler GmbH (“Schübeler”) of Germany for strategic cooperation in electric ducted fan (EDF) propulsion technol",
+      "elapsed_sec": 0.97
+    },
+    {
+      "url": "https://www.suasnews.com/2026/05/uav-navigation-grupo-oesia-launches-vector-300-a-new-autopilot-designed-for-mass-production-of-loitering-munitions-and-c-uas-interceptors/",
+      "title": "UAV Navigation–Grupo Oesía Launches VECTOR - 300, a New Autopilot Designed for Mass Production of Loitering Munitions and C",
+      "final_url": "https://www.suasnews.com/2026/05/uav-navigation-grupo-oesia-launches-vector-300-a-new-autopilot-designed-for-mass-production-of-loitering-munitions-and-c-uas-interceptors/",
+      "published_at": "2026-05-12T13:39:33+00:00",
+      "page_published_at": "2026-05-12T13:39:33+00:00",
+      "text_chars": 3553,
+      "text_preview": "UAV Navigation–Grupo Oesía Launches VECTOR-300, a New Autopilot Designed for Mass Production of Loitering Munitions and C-UAS Interceptors\nEngineered to provide reliable GNSSdenied navigation and fully autonomous mission execution, including complex operational scenarios such as swarming and formation flight, as well as seamless interoperability.\nUAV Navigation, a division of Grupo Oesía specializing in advanced guidance, navigation and control solutions for unmanned vehicles, has announced the ",
+      "elapsed_sec": 0.802
+    }
+  ],
+  "dedupe_and_cluster": {
+    "mode": "embedding_reprint_plus_event",
+    "reason": "",
+    "embedding_backend": "local",
+    "embedding_model": "BAAI/bge-m3",
+    "embedding_cluster_enabled_effective": true,
+    "embedding_api_configured": false,
+    "embedding_elapsed_sec": 10.58,
+    "reprint_dropped_count": 0,
+    "event_cluster_count": 7,
+    "report": {
+      "input_count": 7,
+      "embedding_model": "BAAI/bge-m3",
+      "reprint_threshold": 0.9,
+      "event_link_min": 0.75,
+      "reprint_groups": 7,
+      "reprint_dropped": 0,
+      "reprint_merges": [],
+      "event_link_edges": [],
+      "similarity_pairs": [
+        {
+          "index_a": 0,
+          "index_b": 5,
+          "cosine": 0.59703,
+          "url_a": "https://spectrum.ieee.org/evtol-joby-jon-wagner-motors",
+          "url_b": "https://www.suasnews.com/2026/05/airbility-signs-strategic-mou-with-germanys-schubeler-onedf-propulsion-technology-for-evtol-platforms/",
+          "title_a": "The Hidden Tradeoffs Powering Joby’s eVTOL Motors",
+          "title_b": "Airbility Signs Strategic MoU with Germany’s Schübeler onEDF Propulsion Technology for eVTOL Platforms – sUAS News"
+        },
+        {
+          "index_a": 2,
+          "index_b": 3,
+          "cosine": 0.64036,
+          "url_a": "https://dronedj.com/2026/05/12/dji-autel-drone-ban-fcc/",
+          "url_b": "https://www.suasnews.com/2026/05/is-the-uks-raef-and-sail-marking-system-becoming-an-expensive-double-check-on-drone-manufacturers/",
+          "title_a": "If DJI drones are so dangerous, why are they still flying in US?",
+          "title_b": "Is the UK’s RAE(F) and SAIL Marking System Becoming an Expensive Double"
+        },
+        {
+          "index_a": 4,
+          "index_b": 5,
+          "cosine": 0.56587,
+          "url_a": "https://www.suasnews.com/2026/05/cubepilot-france-embedded-safety-critical-software-engineer/",
+          "url_b": "https://www.suasnews.com/2026/05/airbility-signs-strategic-mou-with-germanys-schubeler-onedf-propulsion-technology-for-evtol-platforms/",
+          "title_a": "CubePilot France – Embedded & Safety Critical Software Engineer – sUAS News",
+          "title_b": "Airbility Signs Strategic MoU with Germany’s Schübeler onEDF Propulsion Technology for eVTOL Platforms – sUAS News"
+        }
+      ],
+      "preview_min_cosine": 0.55,
+      "event_count": 7,
+      "events": [
+        {
+          "event_index": 0,
+          "member_count": 1,
+          "members": [
+            {
+              "url": "https://spectrum.ieee.org/evtol-joby-jon-wagner-motors",
+              "title": "The Hidden Tradeoffs Powering Joby’s eVTOL Motors",
+              "text_chars": 3702
+            }
+          ]
+        },
+        {
+          "event_index": 1,
+          "member_count": 1,
+          "members": [
+            {
+              "url": "https://36kr.com/p/3805672617959173?f=rss",
+              "title": "36氪首发｜新加坡博士团队创业获种子轮融资，首款产品做“会飞的家庭管家”",
+              "text_chars": 2018
+            }
+          ]
+        },
+        {
+          "event_index": 2,
+          "member_count": 1,
+          "members": [
+            {
+              "url": "https://dronedj.com/2026/05/12/dji-autel-drone-ban-fcc/",
+              "title": "If DJI drones are so dangerous, why are they still flying in US?",
+              "text_chars": 9472
+            }
+          ]
+        },
+        {
+          "event_index": 3,
+          "member_count": 1,
+          "members": [
+            {
+              "url": "https://www.suasnews.com/2026/05/is-the-uks-raef-and-sail-marking-system-becoming-an-expensive-double-check-on-drone-manufacturers/",
+              "title": "Is the UK’s RAE(F) and SAIL Marking System Becoming an Expensive Double",
+              "text_chars": 9409
+            }
+          ]
+        },
+        {
+          "event_index": 4,
+          "member_count": 1,
+          "members": [
+            {
+              "url": "https://www.suasnews.com/2026/05/cubepilot-france-embedded-safety-critical-software-engineer/",
+              "title": "CubePilot France – Embedded & Safety Critical Software Engineer – sUAS News",
+              "text_chars": 2313
+            }
+          ]
+        },
+        {
+          "event_index": 5,
+          "member_count": 1,
+          "members": [
+            {
+              "url": "https://www.suasnews.com/2026/05/airbility-signs-strategic-mou-with-germanys-schubeler-onedf-propulsion-technology-for-evtol-platforms/",
+              "title": "Airbility Signs Strategic MoU with Germany’s Schübeler onEDF Propulsion Technology for eVTOL Platforms – sUAS News",
+              "text_chars": 3076
+            }
+          ]
+        },
+        {
+          "event_index": 6,
+          "member_count": 1,
+          "members": [
+            {
+              "url": "https://www.suasnews.com/2026/05/uav-navigation-grupo-oesia-launches-vector-300-a-new-autopilot-designed-for-mass-production-of-loitering-munitions-and-c-uas-interceptors/",
+              "title": "UAV Navigation–Grupo Oesía Launches VECTOR - 300, a New Autopilot Designed for Mass Production of Loitering Munitions and C",
+              "text_chars": 3553
+            }
+          ]
+        }
+      ]
+    },
+    "events_human": [
+      {
+        "event_index": 0,
+        "urls": [
+          "https://spectrum.ieee.org/evtol-joby-jon-wagner-motors"
+        ],
+        "titles": [
+          "The Hidden Tradeoffs Powering Joby’s eVTOL Motors"
+        ]
+      },
+      {
+        "event_index": 1,
+        "urls": [
+          "https://36kr.com/p/3805672617959173?f=rss"
+        ],
+        "titles": [
+          "36氪首发｜新加坡博士团队创业获种子轮融资，首款产品做“会飞的家庭管家”"
+        ]
+      },
+      {
+        "event_index": 2,
+        "urls": [
+          "https://dronedj.com/2026/05/12/dji-autel-drone-ban-fcc/"
+        ],
+        "titles": [
+          "If DJI drones are so dangerous, why are they still flying in US?"
+        ]
+      },
+      {
+        "event_index": 3,
+        "urls": [
+          "https://www.suasnews.com/2026/05/is-the-uks-raef-and-sail-marking-system-becoming-an-expensive-double-check-on-drone-manufacturers/"
+        ],
+        "titles": [
+          "Is the UK’s RAE(F) and SAIL Marking System Becoming an Expensive Double"
+        ]
+      },
+      {
+        "event_index": 4,
+        "urls": [
+          "https://www.suasnews.com/2026/05/cubepilot-france-embedded-safety-critical-software-engineer/"
+        ],
+        "titles": [
+          "CubePilot France – Embedded & Safety Critical Software Engineer – sUAS News"
+        ]
+      },
+      {
+        "event_index": 5,
+        "urls": [
+          "https://www.suasnews.com/2026/05/airbility-signs-strategic-mou-with-germanys-schubeler-onedf-propulsion-technology-for-evtol-platforms/"
+        ],
+        "titles": [
+          "Airbility Signs Strategic MoU with Germany’s Schübeler onEDF Propulsion Technology for eVTOL Platfor"
+        ]
+      },
+      {
+        "event_index": 6,
+        "urls": [
+          "https://www.suasnews.com/2026/05/uav-navigation-grupo-oesia-launches-vector-300-a-new-autopilot-designed-for-mass-production-of-loitering-munitions-and-c-uas-interceptors/"
+        ],
+        "titles": [
+          "UAV Navigation–Grupo Oesía Launches VECTOR - 300, a New Autopilot Designed for Mass Production of Lo"
+        ]
+      }
+    ],
+    "offline_batch_preview": {
+      "description": "无向量时的本批两两检测（标题重复或正文前3000字规范化后 SequenceMatcher 比例）",
+      "body_ratio_threshold": 0.88,
+      "pairs": []
+    }
+  }
+}
