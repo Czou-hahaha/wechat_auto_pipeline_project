@@ -1,6 +1,6 @@
 # V3 — 后端流水线
 
-Event Intelligence 的采集、聚类、通稿、QA 与 BFF 实现。总览与评审步骤见仓库根目录 [README.md](../README.md)。
+Event Intelligence 的采集、聚类、通稿、QA 与 BFF 实现。总览与复现步骤见仓库根目录 [README.md](../README.md)。
 
 ## 流水线阶段
 
