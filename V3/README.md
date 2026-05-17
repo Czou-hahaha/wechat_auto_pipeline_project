@@ -1,55 +1,41 @@
-# V3 — 低空经济 Event Intelligence 流水线
+# V3 — 后端流水线
 
-V3 是 [wechat_auto_pipeline_project](https://github.com/Czou-hahaha/wechat_auto_pipeline_project) 的 **Event 情报版**：从多源检索 → 事件聚类 → AI 通稿 → QA →（可选）公众号草稿。
+Event Intelligence 的采集、聚类、通稿、QA 与 BFF 实现。总览与评审步骤见仓库根目录 [README.md](../README.md)。
 
-## 模块一览
+## 流水线阶段
 
-| 阶段 | 模块 | 说明 |
+| 阶段 | 入口 | 输出 |
 |------|------|------|
-| 检索 | `search.py` / `rss_aggregate.py` / `gdelt_search.py` | RSS + GDELT + 栏目页 |
-| 入库聚类 | `pipeline.py` / `ingest_cluster.py` | 去重、向量/主题聚类 → `events.json` |
-| 阶段三 | `event_enhancement_workflow.py` | 事件扩搜（`event_enhancement/`） |
-| 阶段四 | `services/ai_press_writer/` | 多稿 → `event_press_zh` |
-| 阶段五 | `services/qa_rewrite/` | 通稿 QA + 条件重写 |
-| 配置 | `config/data_sources.json` / `search_keywords.json` | 数据源与关键词 |
-| BFF | `src/bff/` | 供前端 `platform/` 读取 |
-| 演示数据 | `data/demo/` | 可提交 Git 的 fixture |
+| 检索 | `pipeline.run_once` | 候选文章 |
+| 聚类 | `ingest_cluster` / topic 聚类 | `events.json`、`articles.json` |
+| 扩搜 | `event_enhancement_workflow` | 增补关联稿 |
+| 通稿 | `event_press_workflow` | `event_press_zh` |
+| QA | `services/qa_rewrite` | `event_press_qa_*` 字段 |
 
-流程图见 `docs/`：`检索模块流程图.md`、`入库与事件聚类流程.md`、`AI事件通稿生成模块流程.md`、`AI通稿质量控制模块流程.md`。
-
-## 快速开始
-
-```bash
-cd V3
-python -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
-cp .env.example .env   # 填入 DEEPSEEK_API_KEY 等
-
-# 演示：用仓库内 demo 数据 + BFF + 前端（无需跑检索）
-cp data/demo/*.json data/
-PYTHONPATH=. python -m src.main run-bff
-
-# 全链路单次（需 API Key + 网络）
-PYTHONPATH=. python -m src.main run-once
-
-# 定时（.env 中 SCHEDULE_ENABLED=true）
-PYTHONPATH=. python -m src.main run-scheduler
-```
+流程图：`docs/检索模块流程图.md`、`docs/入库与事件聚类流程.md`、`docs/AI事件通稿生成模块流程.md`、`docs/AI通稿质量控制模块流程.md`。
 
 ## CLI
 
-| 命令 | 作用 |
-|------|------|
-| `run-once` | 检索 → 聚类 → 摘要/通稿 → 可选微信草稿 |
-| `run-scheduler` | 按 `SCHEDULE_MORNING/EVENING_HOUR` 定时 run-once |
-| `run-bff` | FastAPI `:8787`，供前端读取事件与配置 |
-| `generate-event-press` | 仅对已有事件生成通稿 |
-| `push-today-drafts` | 将当日摘要推入公众号草稿箱 |
+```bash
+export PYTHONPATH=.
+python -m src.main run-once          # 全链路
+python -m src.main run-scheduler   # 定时（SCHEDULE_*）
+python -m src.main run-bff         # API :8787
+python -m src.main generate-event-press
+```
+
+## 配置
+
+- `config/data_sources.json` — 站点与抓取方式（RSS / html_list）
+- `config/search_keywords.json` — 中英检索词与分类词
+- `.env` — API Key、调度、阈值（见 `.env.example`）
+
+## Demo 数据
+
+`data/demo/`：可提交仓库的完整事件样本，用于 BFF/前端验收。说明见 `data/demo/README.md`。
 
 ## 测试
 
 ```bash
 PYTHONPATH=. python -m pytest tests/ -q
 ```
-
-集成脚本见 `tests/README.md`。

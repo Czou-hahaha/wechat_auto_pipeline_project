@@ -1,43 +1,31 @@
-# AI 低空经济情报平台（前端）
+# platform — 情报前端
 
-Event-first 情报展示 UI，技术栈：Next.js 15+、TypeScript、Tailwind、React Query、Zustand、Recharts、Framer Motion。
+Next.js 实现的 Event Intelligence 工作台，与 `V3/src/bff` 对接。项目背景与验收路径见仓库根目录 [README.md](../README.md)。
 
-## 启动
+## 技术栈
+
+Next.js（App Router）、TypeScript、Tailwind CSS、React Query、Zustand、Recharts、Framer Motion。
+
+## 页面
+
+| 路由 | 功能 |
+|------|------|
+| `/` | 指标 Dashboard |
+| `/events` | 事件列表与筛选 |
+| `/events/[id]` | 通稿、时间线、溯源、QA（核心页） |
+| `/qa` | 通稿质量复核 |
+| `/search` | 已入库事件检索 |
+| `/settings` | 数据源、关键词、定时任务配置 |
+
+## 本地运行
 
 ```bash
-cd platform
 npm install
 npm run dev
 ```
 
-浏览器打开 http://localhost:3000
-
-## 连接 V3 真实数据（可选）
-
-终端 1 — BFF（读取 `V3/data/events.json`）：
+连接后端：在 `.env.local` 设置 `BFF_BASE_URL=http://127.0.0.1:8787`（先启动 `V3` 的 `run-bff`）。未配置时自动使用 `lib/mock/`。
 
 ```bash
-cd V3
-pip install fastapi uvicorn
-PYTHONPATH=. python -m src.main run-bff
+npm run build   # 生产构建（--webpack）
 ```
-
-终端 2 — 前端：
-
-```bash
-cd platform
-echo 'BFF_BASE_URL=http://127.0.0.1:8787' >> .env.local
-npm run dev
-```
-
-BFF 不可达时，Route Handlers 自动回退到 `lib/mock/events.ts`。
-
-## 页面
-
-| 路径 | 说明 |
-|------|------|
-| `/` | Dashboard |
-| `/events` | 事件列表 |
-| `/events/[id]` | **Event Detail**（核心：通稿 + 溯源 + QA） |
-| `/qa` | QA 审核 |
-| `/search` | 事件搜索 |
