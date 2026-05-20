@@ -1,8 +1,9 @@
 # V3 — 后端流水线
 
-Event Intelligence 的采集、聚类、通稿、QA 与 BFF 实现。总览与复现步骤见仓库根目录 [README.md](../README.md)。
+Event Intelligence 的采集、聚类、通稿、QA 与 BFF 实现。
 
-**当前推荐分支 `V3.1`**：在 V3 基线上的发布策略、平台调度与中文源修复。相对 V3 改了什么、为什么改，见 **[docs/V3.1_更新说明.md](docs/V3.1_更新说明.md)**；端到端验收见 [docs/全流程验收步骤_重要性Top3发布.md](docs/全流程验收步骤_重要性Top3发布.md)。
+- **仓库首页（版本说明、V3 vs V3.1）**：[../README.md#v31](../README.md#v31)
+- 详细 changelog：[docs/V3.1_更新说明.md](docs/V3.1_更新说明.md) · 验收：[docs/全流程验收步骤_重要性Top3发布.md](docs/全流程验收步骤_重要性Top3发布.md)
 
 ## 流水线阶段
 

@@ -8,7 +8,41 @@
 | 领域 | 低空经济、无人机、eVTOL、BVLOS 等 |
 | 后端 | Python 3.11+ 流水线（`V3/`） |
 | 前端 | Next.js 16 + TypeScript 情报工作台（`platform/`） |
-| 分支 | 建议在 `v3-intelligence` 查看本版本 |
+| **当前版本** | 分支 **`V3.1`**（推荐）；基线 V3 见 `v3-intelligence` |
+
+---
+
+<a id="v31"></a>
+
+## 当前版本：V3.1（相对 V3 改了什么）
+
+> 完整说明：[V3/docs/V3.1_更新说明.md](V3/docs/V3.1_更新说明.md) · 端到端验收：[V3/docs/全流程验收步骤_重要性Top3发布.md](V3/docs/全流程验收步骤_重要性Top3发布.md)
+
+V3 已打通检索 → 聚类 → 扩搜 → 通稿 → QA → 展示；**V3.1** 针对上线运营补齐：只推最重要稿件、少重复推送、平台可配可点「采集」、中文源时间与 GDELT 更稳。
+
+**为什么要更新**
+
+| # | V3 痛点 | V3.1 做法 |
+|---|---------|-----------|
+| 1 | 全簇都做 DeepSeek 摘要，成本高 | 默认只对 **importance Top 3** 摘要/推微信（`WECHAT_PUBLISH_TOP_N`） |
+| 2 | 同话题几天内重复进草稿箱 | **3 日冷却**（`WECHAT_PUBLISH_COOLDOWN_DAYS`），同 topic/标题跳过 |
+| 3 | 改定时、跑采集要靠 SSH/CLI | 平台设置页 + BFF **定时任务 / run-once 后台任务** |
+| 4 | 中文 HTML 源发布时间不准 | 多站 `published_at_css`、落地页时间 **backfill** |
+| 5 | GDELT 易 429、中英文混查 | **http_core** 重试/缓存/节流 + 扩搜 **语言路由** |
+
+**能力对比（摘要）**
+
+| 领域 | V3 | V3.1 |
+|------|-----|------|
+| 发布 | `MAX_PUBLISH_PER_RUN` 等多簇 | Top N + 冷却 + 摘要 **≥800 可见字** 才发布 |
+| 检索 | 抓取后过滤为主 | **topic_prefilter**（无 LLM）先丢弱相关 |
+| 调度 | `.env` 固定早晚点 | `config/schedule_jobs.json`，保存后 BFF **自动启停 scheduler** |
+| 前端 | 展示 + 部分配置 | Dashboard **「开始采集」**、Pipeline 状态、事件详情 **参考稿** 区 |
+| 微信草稿 | `draft/add` | 可选推送后 **清空正文缓存**；digest 剥离 `〔n〕` 引用 |
+
+```bash
+git clone -b V3.1 https://github.com/Czou-hahaha/wechat_auto_pipeline_project.git
+```
 
 ---
 
@@ -108,7 +142,7 @@ flowchart TB
 > 使用仓库内 **demo 数据**，不依赖 DeepSeek 与外网检索，即可验证前后端联调。
 
 ```bash
-git clone -b v3-intelligence https://github.com/Czou-hahaha/wechat_auto_pipeline_project.git
+git clone -b V3.1 https://github.com/Czou-hahaha/wechat_auto_pipeline_project.git
 cd wechat_auto_pipeline_project
 ```
 
@@ -179,10 +213,11 @@ PYTHONPATH=. python -m pytest tests/ -q
 
 ## 8. 版本说明
 
-| 版本 | 说明 |
-|------|------|
+| 版本 / 分支 | 说明 |
+|-------------|------|
 | `main`（远程） | 早期 article 级微信摘要流水线 |
-| **`v3-intelligence`** | 本 README 对应版本：Event 情报 + Web 平台 |
+| `v3-intelligence` | V3：Event 情报 + Web 平台（首版） |
+| **`V3.1`** | **当前推荐**：Top3 发布、平台采集控制台、中文源/GDELT 修复（见文首「当前版本」） |
 
 ---
 
