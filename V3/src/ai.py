@@ -11,6 +11,10 @@ from difflib import SequenceMatcher
 import httpx
 
 from src.utils.prompt_load import load_prompt_file
+from src.utils.summary_html import (
+    sanitize_summary_text as _sanitize_summary_html,
+    summary_visible_char_count,
+)
 
 logger = logging.getLogger(__name__)
 _PROMPTS_DIR = Path(__file__).resolve().parents[1] / "docs" / "prompts"
@@ -30,14 +34,17 @@ class SummaryService:
         self._cluster_summary_user_tpl = self._load_cluster_summary_user_template()
         self._qa_review_system = self._load_qa_review_system()
 
-    async def summarize(self, *, title: str, text: str, max_chars: int = 2200, min_chars: int = 400) -> str:
+    async def summarize(self, *, title: str, text: str, max_chars: int = 1500, min_chars: int = 800) -> str:
         clean_text = (text or "").strip()[:12000]
         if not clean_text:
             return f"【摘要】{title}\n原文正文不足，暂不生成摘要。"
         if not self._api_key:
             return self._fallback(title=title, text=clean_text, max_chars=max_chars)
+        rules = self._load_editorial_rules()
         prompt = (
             self._style_guide.replace("{{MAX_CHARS}}", str(max_chars)).strip()
+            + "\n\n## 共用编辑规则\n\n"
+            + rules
             + "\n\n"
             + f"标题：{title}\n\n原文：\n{clean_text}\n\n仅输出摘要正文。"
         )
@@ -67,8 +74,8 @@ class SummaryService:
         self,
         *,
         items: list[dict[str, str]],
-        max_chars: int = 2200,
-        min_chars: int = 400,
+        max_chars: int = 1500,
+        min_chars: int = 800,
     ) -> tuple[str, str]:
         """
         多源整合摘要：``items`` 每项建议包含 title/text/source_host（可选 source_label）。
@@ -76,6 +83,8 @@ class SummaryService:
         """
         if not items:
             return "", ""
+        if len(items) > 5:
+            items = items[:5]
         if len(items) == 1:
             one = items[0]
             body = await self.summarize(
@@ -90,21 +99,24 @@ class SummaryService:
             t = str(it.get("title", "")).strip()
             host = str(it.get("source_host", "") or it.get("source_label", "")).strip()
             tx = (str(it.get("text", "")).strip())[:3500]
+            url = str(it.get("source_url", "") or "").strip()
             label = host or f"来源{i}"
-            blocks.append(f"【{label}】\n标题：{t}\n正文摘录：\n{tx}")
+            link_line = f"链接：{url}\n" if url else ""
+            blocks.append(f"【{label}】\n标题：{t}\n{link_line}正文摘录：\n{tx}")
         bundle = "\n\n".join(blocks)
         if not self._api_key:
             fb = self._fallback(title=str(items[0].get("title", "")), text=bundle, max_chars=max_chars)
             return str(items[0].get("title", "") or "").strip(), fb
-        user_prompt = (
-            self._cluster_summary_user_tpl.replace("{{MAX_CHARS}}", str(max_chars))
-            .replace("{{MIN_CHARS}}", str(min_chars))
-            .replace("{{BUNDLE}}", bundle)
+        user_prompt = self._build_cluster_summary_user_prompt(
+            bundle=bundle,
+            max_chars=max_chars,
+            min_chars=min_chars,
         )
         data = await self._chat_json(
             system_prompt=self._cluster_summary_system,
             user_prompt=user_prompt,
             timeout=120.0,
+            max_tokens=min(4096, max_chars + 1200),
         )
         if not isinstance(data, dict):
             fb = self._fallback(title=str(items[0].get("title", "")), text=bundle, max_chars=max_chars)
@@ -112,8 +124,7 @@ class SummaryService:
         out_title = str(data.get("title", "") or "").strip() or str(items[0].get("title", "")).strip()
         summary = str(data.get("summary", "") or "").strip()
         summary = self._sanitize_summary_text(summary)[:max_chars]
-        plain = "".join(summary.split())
-        if len(plain) < min_chars:
+        if summary_visible_char_count(summary) < min_chars:
             fb = self._fallback(title=out_title, text=bundle, max_chars=max_chars)
             return out_title, fb
         return out_title, summary
@@ -137,9 +148,14 @@ class SummaryService:
             return "", ""
         if not self._bundle_is_low_cjk(title=title, summary=summary):
             return "", ""
+        rules = self._load_editorial_rules()
         user_prompt = (
-            "将下列公众号成稿标题与摘要翻译成自然、流畅的简体中文，保持事实准确、语气中立。"
-            "不要解释。仅输出 JSON：{\"title_zh\":\"...\",\"summary_zh\":\"...\"}\n\n"
+            "将下列公众号成稿标题与摘要改写为自然、流畅的简体中文，面向非专业读者，保持事实准确、语气中立。\n"
+            "保留原文中的 <strong>...</strong> 重点句标签（整句包裹）；勿新增材料未写的事实与日期。\n"
+            "若原文为海外监管/政策类且缺少中国信息，可在摘要中补写简短「国内参照」段（规则见下）。\n"
+            "禁止出现「报道口径不一致」等元叙述。\n\n"
+            f"{rules}\n\n"
+            "仅输出 JSON：{\"title_zh\":\"...\",\"summary_zh\":\"...\"}\n\n"
             f"标题：\n{(title or '')[:220]}\n\n摘要：\n{(summary or '')[:8000]}"
         )
         data = await self._chat_json(
@@ -260,6 +276,7 @@ class SummaryService:
         summary: str,
         max_article_age_hours: int,
         min_score: int = 80,
+        min_summary_chars: int = 800,
         enabled: bool = True,
         source_published_at_date_only: bool = False,
         date_only_max_calendar_age_days: int = 3,
@@ -282,6 +299,7 @@ class SummaryService:
             max_article_age_hours=max_article_age_hours,
             source_text=source_text,
             summary=summary,
+            min_summary_chars=min_summary_chars,
             source_published_at_date_only=source_published_at_date_only,
             date_only_max_calendar_age_days=date_only_max_calendar_age_days,
             schedule_timezone=schedule_timezone,
@@ -318,7 +336,7 @@ class SummaryService:
             f"- first_paragraph_similarity: {deterministic['first_paragraph_similarity']}\n"
             f"- summary_len_no_whitespace: {deterministic['summary_len_no_whitespace']}\n"
             f"- has_raw_link_or_原文链接: {deterministic['has_raw_link_or_原文链接']}\n"
-            f"- fallback_prefix_【摘要】: {deterministic['fallback_prefix_【摘要']}\n\n"
+            f"- fallback_prefix_【摘要】: {deterministic['fallback_prefix_【摘要】']}\n\n"
             "输出 JSON schema:\n"
             "{\n"
             '  "pass": true/false,\n'
@@ -328,11 +346,30 @@ class SummaryService:
             '  "quick_verdict": "一句话结论"\n'
             "}"
         )
-        data = await self._chat_json(
-            system_prompt=self._qa_review_system,
-            user_prompt=user_prompt,
-            timeout=90.0,
-        )
+        data: dict | None = None
+        last_raw = ""
+        for qa_attempt in range(2):
+            try:
+                last_raw = await self._chat_text(
+                    payload=self._chat_payload(
+                        system_prompt=self._qa_review_system,
+                        user_prompt=user_prompt,
+                        max_tokens=1200,
+                        temperature=0.1,
+                    ),
+                    timeout=90.0,
+                )
+            except Exception:
+                logger.warning("qa chat request failed", exc_info=True)
+                last_raw = ""
+            data = self._parse_chat_json_text(last_raw)
+            if isinstance(data, dict):
+                break
+            head = (last_raw or "")[:500]
+            if qa_attempt == 0:
+                logger.warning("qa invalid output (non-JSON), retry once head=%s", head)
+            else:
+                logger.warning("qa invalid output after retry head=%s", head)
         if not isinstance(data, dict):
             return {
                 "pass": False,
@@ -388,15 +425,33 @@ class SummaryService:
             logger.warning("簇摘要 system 读取失败，使用默认")
             return default_sys
 
+    def _load_editorial_rules(self) -> str:
+        try:
+            text = load_prompt_file("summary_editorial_rules")
+            if text:
+                return text
+        except Exception:
+            logger.warning("summary_editorial_rules 读取失败", exc_info=True)
+        return ""
+
+    def _build_cluster_summary_user_prompt(
+        self, *, bundle: str, max_chars: int, min_chars: int
+    ) -> str:
+        rules = self._load_editorial_rules()
+        tpl = self._cluster_summary_user_tpl
+        return (
+            tpl.replace("{{EDITORIAL_RULES}}", rules)
+            .replace("{{MAX_CHARS}}", str(max_chars))
+            .replace("{{MIN_CHARS}}", str(min_chars))
+            .replace("{{BUNDLE}}", bundle)
+        )
+
     @staticmethod
     def _load_cluster_summary_user_template() -> str:
         fallback = (
-            "你是中文公众号编辑。下面给出同一主题下多篇报道的摘录（不同角度、不同站点）。\n"
-            "请综合成一篇可发布的摘要：只使用摘录中事实；冲突写明报道口径不一致；"
-            "转述归纳；首段概括；段落间空行；不写小标题。\n"
+            "请综合成一篇可发布的摘要。编辑规则：\n{{EDITORIAL_RULES}}\n"
             "总长度不超过 {{MAX_CHARS}} 字，不少于 {{MIN_CHARS}} 字。\n"
-            "文末「信息来源：」列举媒体名。输出 JSON："
-            '{"title":"...","summary":"..."}\n\n材料：\n{{BUNDLE}}'
+            '输出 JSON：{"title":"...","summary":"..."}\n\n材料：\n{{BUNDLE}}'
         )
         try:
             return load_prompt_file("cluster_summary_user")
@@ -433,7 +488,7 @@ class SummaryService:
     def _summary_qualified(*, summary: str, source_text: str, min_chars: int) -> bool:
         plain_summary = "".join((summary or "").split())
         plain_source = "".join((source_text or "").split())
-        if len(plain_summary) < min_chars:
+        if summary_visible_char_count(summary) < min_chars:
             return False
         overlap = SequenceMatcher(None, plain_summary[:2200], plain_source[:2200]).ratio()
         if overlap > 0.6:
@@ -453,10 +508,12 @@ class SummaryService:
         max_article_age_hours: int,
         source_text: str,
         summary: str,
+        min_summary_chars: int = 800,
         source_published_at_date_only: bool = False,
         date_only_max_calendar_age_days: int = 3,
         schedule_timezone: str = "Asia/Shanghai",
     ) -> dict:
+        visible_len = summary_visible_char_count(summary)
         plain_summary = "".join((summary or "").split())
         plain_source = "".join((source_text or "").split())
         overlap = SequenceMatcher(None, plain_summary[:2200], plain_source[:2200]).ratio() if plain_source else 1.0
@@ -482,10 +539,10 @@ class SummaryService:
             hard_fails.append("source_published_at_outside_window_or_invalid")
         if fallback_prefix:
             hard_fails.append("fallback_prefix_【摘要】")
-        if len(plain_summary) > 2000:
-            hard_fails.append("summary_length_over_2000")
-        if len(plain_summary) < 300:
-            hard_fails.append("summary_length_under_300")
+        if len(plain_summary) > 1500:
+            hard_fails.append("summary_length_over_1500")
+        if visible_len < min_summary_chars:
+            hard_fails.append(f"summary_length_under_{min_summary_chars}")
         if overlap > 0.6:
             hard_fails.append(f"overlap_ratio_over_0.6:{overlap:.4f}")
         if first_ratio > 0.75:
@@ -500,7 +557,8 @@ class SummaryService:
             "in_time_window": in_time,
             "overlap_ratio": round(overlap, 4),
             "first_paragraph_similarity": round(first_ratio, 4),
-            "summary_len_no_whitespace": len(plain_summary),
+            "summary_len_no_whitespace": visible_len,
+            "summary_min_chars": min_summary_chars,
             "has_raw_link_or_原文链接": has_raw_link,
             "fallback_prefix_【摘要】": fallback_prefix,
             "hard_fail_items": hard_fails,
@@ -635,20 +693,8 @@ class SummaryService:
             data = resp.json()
         return (data.get("choices", [{}])[0].get("message", {}).get("content", "") or "").strip()
 
-    async def _chat_json(self, *, system_prompt: str, user_prompt: str, timeout: float) -> dict | None:
-        try:
-            text = await self._chat_text(
-                payload=self._chat_payload(
-                    system_prompt=system_prompt,
-                    user_prompt=user_prompt,
-                    max_tokens=1200,
-                    temperature=0.1,
-                ),
-                timeout=timeout,
-            )
-        except Exception:
-            logger.warning("chat json request failed", exc_info=True)
-            return None
+    @staticmethod
+    def _parse_chat_json_text(text: str) -> dict | None:
         if not text:
             return None
         raw = text.strip()
@@ -659,17 +705,42 @@ class SummaryService:
         if raw.endswith("```"):
             raw = raw[:-3].strip()
         try:
-            return json.loads(raw)
+            parsed = json.loads(raw)
+            return parsed if isinstance(parsed, dict) else None
         except Exception:
             pass
         start = raw.find("{")
         end = raw.rfind("}")
         if start >= 0 and end > start:
             try:
-                return json.loads(raw[start : end + 1])
+                parsed = json.loads(raw[start : end + 1])
+                return parsed if isinstance(parsed, dict) else None
             except Exception:
                 return None
         return None
+
+    async def _chat_json(
+        self,
+        *,
+        system_prompt: str,
+        user_prompt: str,
+        timeout: float,
+        max_tokens: int = 1200,
+    ) -> dict | None:
+        try:
+            text = await self._chat_text(
+                payload=self._chat_payload(
+                    system_prompt=system_prompt,
+                    user_prompt=user_prompt,
+                    max_tokens=max(1200, int(max_tokens)),
+                    temperature=0.1,
+                ),
+                timeout=timeout,
+            )
+        except Exception:
+            logger.warning("chat json request failed", exc_info=True)
+            return None
+        return self._parse_chat_json_text(text)
 
     @staticmethod
     def _fallback_topic_classification(*, title: str, text: str) -> dict:
@@ -695,9 +766,4 @@ class SummaryService:
 
     @staticmethod
     def _sanitize_summary_text(text: str) -> str:
-        out = text or ""
-        # Product requirement: do not expose markdown emphasis markers.
-        out = out.replace("**", "")
-        out = out.replace("\r\n", "\n").replace("\r", "\n")
-        out = "\n".join(line.rstrip() for line in out.split("\n"))
-        return out.strip()
+        return _sanitize_summary_html(text)

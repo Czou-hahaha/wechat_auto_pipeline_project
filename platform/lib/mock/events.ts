@@ -342,5 +342,5 @@ export function mockSearch(q: string, mode: string) {
         e.summaryPreview.toLowerCase().includes(needle),
     );
   }
-  return { items, total: items.length, mode };
+  return { items, total: items.length, mode: "unified" };
 }

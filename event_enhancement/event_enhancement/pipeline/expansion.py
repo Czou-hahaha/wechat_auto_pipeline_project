@@ -1,9 +1,11 @@
 """Orchestration: refresh scores, pick top-N, GDELT, extract, embed, FAISS gate, persist.
 
 扩搜单源内：先收集高于相似度阈值的候选，再按**余弦相似度升序**（优先与事件 bank 相对更远、仍达标）依次写入，直至达到每事件篇数上限。
+中文 event 跳过 GDELT；英文 event 使用 ``sourcelang:english``。
 """
 from __future__ import annotations
 
+import asyncio
 import logging
 import uuid
 from datetime import datetime, timedelta, timezone
@@ -20,8 +22,9 @@ from event_enhancement.db.models import Article, Event, EventArticleMap, Expansi
 from event_enhancement.embed import bge_m3
 from event_enhancement.extract.article_body import extract_body_trafilatura, fetch_html_text_with_effective_url
 from event_enhancement.gdelt.client import GdeltAsyncClient
-from event_enhancement.expansion_cascade import fetch_expansion_source_hits
-from event_enhancement.gdelt.query import build_expansion_plain_phrase
+from event_enhancement.expansion_cascade import expansion_sources_for_event_lang, fetch_expansion_source_hits
+from event_enhancement.gdelt.query import build_expansion_plain_phrase, gdelt_query_from_plain
+from event_enhancement.lang_detect import detect_event_expansion_lang
 from event_enhancement.gdelt.types import GdeltHit
 from event_enhancement.scoring.importance import compute_importance_score, host_from_url
 from event_enhancement.settings import Settings
@@ -229,22 +232,42 @@ async def expand_one_event(
             await session.flush()
             return log
 
+        member_rows: list[dict] = []
+        for m in maps:
+            if m.article is None:
+                continue
+            a = m.article
+            member_rows.append(
+                {
+                    "title": a.title,
+                    "extracted_text": a.body_text or "",
+                    "status": a.status or "",
+                    "map_role": (m.role or "").strip().lower(),
+                }
+            )
+        event_lang = detect_event_expansion_lang(
+            event_title=event.title or "",
+            member_articles=member_rows,
+            cjk_threshold=float(exp.expansion_event_lang_cjk_ratio),
+        )
         plain = build_expansion_plain_phrase(
-            event_title=event.title,
+            event_title=event.title or "",
             anchor_terms=list(exp.anchor_terms),
             event_title_max_chars=exp.gdelt_event_title_max_chars,
             primary_anchor=exp.gdelt_primary_anchor,
+            event_lang=event_lang,
+            max_english_words=int(exp.gdelt_event_title_max_words_en),
         )
+        sources_order = expansion_sources_for_event_lang(event_lang, exp)
+        gdelt_skipped = event_lang == "zh"
+        gdelt_q = "" if gdelt_skipped else gdelt_query_from_plain(plain, lang=event_lang)
         source_trace: list[dict] = []
-        if exp.expansion_search_cascade:
-            sources_order: tuple[str, ...] = ("gdelt", "google_rss", "ddgs")
-        elif exp.web_search_backend == "ddgs":
-            sources_order = ("ddgs",)
-        else:
-            sources_order = ("gdelt",)
 
         log.queries_json = {
             "plain_phrase": plain,
+            "event_lang": event_lang,
+            "gdelt_skipped": gdelt_skipped,
+            "gdelt_query": gdelt_q,
             "search_cascade": list(sources_order),
             "search_attempts_per_source": exp.search_attempts_per_source,
             "expansion_search_cascade": exp.expansion_search_cascade,
@@ -271,6 +294,38 @@ async def expand_one_event(
         inserted = 0
         passed_sim = 0
         threshold = float(exp.similarity_threshold)
+        fetch_sem = asyncio.Semaphore(max(1, int(exp.expansion_fetch_concurrency)))
+
+        async def _score_pg_hit(h: GdeltHit) -> tuple[float, GdeltHit, str, str, np.ndarray] | None:
+            if h.url in existing:
+                return None
+            async with fetch_sem:
+                try:
+                    html, page_eff = await fetch_html_text_with_effective_url(
+                        http_client, h.url, timeout_sec=exp.http_fetch_timeout_sec
+                    )
+                except Exception as e:
+                    logger.debug("fetch failed url=%s err=%s", h.url[:80], e)
+                    return None
+            store_url = (page_eff or h.url).strip()
+            if store_url in existing:
+                return None
+            body = extract_body_trafilatura(
+                html,
+                page_url=page_eff or h.url,
+                min_chars=exp.trafilatura_min_chars,
+            )
+            if not body:
+                return None
+            cand_text = f"{h.title}\n{body}"[: exp.embedding_max_input_chars]
+            cvecs = await bge_m3.encode_texts([cand_text], settings.embedding_model_id)
+            if not cvecs:
+                return None
+            cvec = np.asarray(cvecs[0], dtype=np.float32).reshape(-1)
+            sim = max_cosine_vs_bank(cvec, bank)
+            if sim <= threshold:
+                return None
+            return (float(sim), h, store_url, body, cvec)
 
         for src in sources_order:
             if inserted >= slots:
@@ -280,44 +335,26 @@ async def expand_one_event(
                 plain_phrase=plain,
                 gdelt_client=gdelt_client,
                 exp=exp,
+                event_lang=event_lang,
             )
             source_trace.append(meta)
 
             pending_rows: list[tuple[float, GdeltHit, str, str, np.ndarray]] = []
             pending_store_urls: set[str] = set()
 
+            batch: list[GdeltHit] = []
             for h in hits:
                 if h.url in seen_urls_global:
                     continue
                 seen_urls_global.add(h.url)
                 uniq.append(h)
-                if h.url in existing:
+                batch.append(h)
+
+            scored = await asyncio.gather(*[_score_pg_hit(h) for h in batch])
+            for item in scored:
+                if item is None:
                     continue
-                try:
-                    html, page_eff = await fetch_html_text_with_effective_url(
-                        http_client, h.url, timeout_sec=exp.http_fetch_timeout_sec
-                    )
-                except Exception as e:
-                    logger.debug("fetch failed url=%s err=%s", h.url[:80], e)
-                    continue
-                store_url = (page_eff or h.url).strip()
-                if store_url in existing:
-                    continue
-                body = extract_body_trafilatura(
-                    html,
-                    page_url=page_eff or h.url,
-                    min_chars=exp.trafilatura_min_chars,
-                )
-                if not body:
-                    continue
-                cand_text = f"{h.title}\n{body}"[: exp.embedding_max_input_chars]
-                cvecs = await bge_m3.encode_texts([cand_text], settings.embedding_model_id)
-                if not cvecs:
-                    continue
-                cvec = np.asarray(cvecs[0], dtype=np.float32).reshape(-1)
-                sim = max_cosine_vs_bank(cvec, bank)
-                if sim <= threshold:
-                    continue
+                sim, h, store_url, body, cvec = item
                 if store_url in pending_store_urls:
                     continue
                 pending_store_urls.add(store_url)

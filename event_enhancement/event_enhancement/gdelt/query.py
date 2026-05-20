@@ -76,6 +76,45 @@ def strip_gdelt_query_lang_suffix(query: str) -> str:
     return re.sub(r"\s+sourcelang:\w+\s*$", "", (query or "").strip(), flags=re.I).strip()
 
 
+def limit_english_words(text: str, max_words: int) -> str:
+    """Trim to at most ``max_words`` whitespace-separated tokens."""
+    t = _strip_site_suffix(text or "")
+    t = re.sub(r"[《》【】\[\]]", "", t).strip()
+    if max_words <= 0 or not t:
+        return t
+    words = t.split()
+    if len(words) > max_words:
+        t = " ".join(words[:max_words])
+    return t.rstrip(".,;:")
+
+
+def format_english_event_title(
+    event_title: str,
+    member_titles: Iterable[str] | None = None,
+    *,
+    max_words: int = 20,
+) -> str:
+    """
+    English event label for storage and expansion: one line, at most ``max_words`` tokens.
+    Merges up to two member headlines when they add distinct wording.
+    """
+    parts: list[str] = []
+    seen: set[str] = set()
+    for raw in [event_title, *(member_titles or [])]:
+        t = _strip_site_suffix(str(raw or ""))
+        if not t:
+            continue
+        key = t.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        parts.append(t)
+        if len(parts) >= 3:
+            break
+    blob = " ".join(parts)
+    return limit_english_words(blob, max_words)
+
+
 def _primary_anchor_term(anchor_terms: list[str], *, override: str | None) -> str:
     o = (override or "").strip()
     if o:
@@ -97,11 +136,18 @@ def build_expansion_plain_phrase(
     anchor_terms: list[str],
     event_title_max_chars: int | None,
     primary_anchor: str | None,
+    event_lang: str = "zh",
+    max_english_words: int = 20,
 ) -> str:
     """
-    扩搜统一检索词：``{截断后事件名} {主锚}``（空格拼接，无 AND/括号），用于 GDELT / Google RSS / DDGS。
-    去掉书名号等符号，减轻 GDELT 畸形 query。
+    扩搜检索词（纯文本，无 AND/括号）：
+
+    - ``zh``：``{截断后事件名} {主锚}``（默认主锚含「低空经济」）
+    - ``en``：仅英文事件名，最多 ``max_english_words`` 个词，不拼中文锚词
     """
+    lang = (event_lang or "zh").strip().lower()
+    if lang == "en":
+        return format_english_event_title(event_title, max_words=max_english_words)
     anchor = _primary_anchor_term(anchor_terms, override=primary_anchor)
     et = _strip_site_suffix(event_title)
     et = re.sub(r"[《》【】\[\]]", "", et).strip()
@@ -114,10 +160,18 @@ def build_expansion_plain_phrase(
 
 
 def gdelt_chinese_query_from_plain(plain: str) -> str:
-    p = (plain or "").strip()
-    if not p:
-        return ""
-    return f"{p} sourcelang:chinese"
+    """宽召回：纯文本 query，语言过滤在本地完成。"""
+    return (plain or "").strip()
+
+
+def gdelt_english_query_from_plain(plain: str) -> str:
+    return (plain or "").strip()
+
+
+def gdelt_query_from_plain(plain: str, *, lang: str) -> str:
+    """``lang`` in ``zh`` | ``en``；扩搜对 zh event 默认不调用 GDELT。"""
+    _ = lang
+    return (plain or "").strip()
 
 
 def build_gdelt_query_strings(

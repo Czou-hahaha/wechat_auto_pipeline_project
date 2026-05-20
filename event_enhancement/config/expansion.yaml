@@ -19,40 +19,54 @@ anchor_terms:
   - drone
   - eVTOL
 
-# 三级联扩搜：GDELT（中文）→ Google News RSS → DDGS；有成功入库则不再试后续源
+# 三级联扩搜：中文 event → RSS→DDGS；英文 GDELT→RSS→DDGS
 expansion_search_cascade: true
-# 单源「始终无结果」时的最大轮数（每轮 GDELT 内部仍有 max_retries 次 HTTP 重试）
-search_attempts_per_source: 3
+# true：英文扩搜走 GDELT→RSS→DDGS；false：英文仅 RSS→DDGS
+expansion_gdelt_en_enabled: true
+# 单源「连续 0 条命中」时最多再查几轮（不是 HTTP 失败重试；失败由 gdelt.max_retries 管）
+# 例：2 = 最多查 2 轮，仍 0 条则换下一源（RSS/DDGS）或结束该源
+search_attempts_per_source: 2
+# 标题+主稿 CJK 占比 ≥ 该值 → zh（不调用 GDELT）
+expansion_event_lang_cjk_ratio: 0.15
+# JSON 模式：扩搜 event 串行（避免与主链路 GDELT 并发）；单 event 内候选 URL 并行抓取数
+expansion_event_concurrency: 1
+expansion_fetch_concurrency: 5
 
 # 扩搜后端：仅 expansion_search_cascade 为 false 时使用 gdelt | ddgs
 web_search_backend: gdelt
 # 非空时强制作为主锚词与「截断事件名」做 AND；省略则自动选 anchor_terms 中首条含中文，否则首条
 # gdelt_primary_anchor: 低空经济
 
-max_events_per_run: 3
-# 单个事件在 PG 中关联的稿件数上限（EventArticleMap 条数）；达到后不再扩搜入库，且不删已有 Article/JSON 行
-max_articles_per_event: 5
+# 单轮 run_once 最多扩搜的事件数；应 ≥ 当日预期入库事件数（避免后排事件被跳过）
+max_events_per_run: 15
+# 单个事件关联稿件上限（含种子）；达到后不再扩搜入库
+max_articles_per_event: 10
+# 扩搜结束后至少 N 篇可用稿才进入簇摘要 / QA / 推微信
+min_articles_for_summary: 2
 expansion_ranking_window_hours: 48
 expansion_ranking_timezone: Asia/Shanghai
 expansion_min_interval_hours: 0
 
-# 事件标题参与检索词的最大字符数（Unicode）；与「主锚」空格拼接，去掉《》等符号
+# 中文事件标题参与检索词的最大字符数（Unicode）；与「主锚」空格拼接
 gdelt_event_title_max_chars: 15
+# 英文事件名 / 英文扩搜 query 最多词数（空格分词）
+gdelt_event_title_max_words_en: 20
 # true 时把成员稿标题拼进 blurb（旧行为，易超长）；false 只用截断后的事件标题 + 锚词
 gdelt_query_include_member_titles: false
 # 兼容字段（旧 OR 组句）；当前扩搜为「事件名 + 主锚」纯文本，此项不参与组句
 gdelt_query_max_or_terms: 4
 
 gdelt:
-  timespan: "12h"
-  max_records: 40
-  max_concurrent: 2
-  min_interval_sec: 1.5
-  backoff_base_sec: 2.0
-  backoff_max_sec: 60.0
-  jitter_sec: 1.0
-  # 单次 HTTP 失败（含非 JSON/429）最多重试次数，用尽后返回空结果
+  timespan: "24h"
+  max_records: 50
+  max_concurrent: 1
+  min_interval_sec: 5
+  backoff_base_sec: 5.0
+  backoff_max_sec: 20.0
+  jitter_sec: 0.0
+  # 单次 HTTP 失败（含非 JSON/429/空体）最多重试次数（退避 5s→10s→20s）
   max_retries: 3
+  retry_timeout_sec: 15
 
 similarity_threshold: 0.70
 embedding_max_input_chars: 8000

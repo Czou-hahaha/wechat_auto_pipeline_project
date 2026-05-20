@@ -118,6 +118,16 @@ def _article_like_path(url: str, site_value: str) -> bool:
         if path.rstrip("/").split("/")[-1] in {"feed", "rss", "shop", "cart"}:
             return False
         return bool(re.search(r"/\d{4}/", path)) or len(path.strip("/").split("/")[-1]) > 20
+    if "36kr.com" in host and re.search(r"/p/\d+", path):
+        return True
+    if "tmtpost.com" in host and re.search(r"/\d+\.html?", path):
+        return True
+    if "huxiu.com" in host and "/article/" in path:
+        return True
+    if "jiemian.com" in host and "/article/" in path:
+        return True
+    if "yicai.com" in host and re.search(r"/news/\d+", path):
+        return True
     return False
 
 

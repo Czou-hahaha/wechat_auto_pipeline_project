@@ -1,61 +1,9 @@
 [
   {
-    "title": "What Makes eVTOL Motors Different Than EV Motors?",
-    "url": "https://spectrum.ieee.org/evtol-joby-jon-wagner-motors",
-    "snippet": "",
-    "published_at": "2026-04-27T13:00:01+00:00",
-    "from_rss": true,
-    "published_at_probe": {
-      "article_page_fetched": true,
-      "article_page_final_url": "https://spectrum.ieee.org/evtol-joby-jon-wagner-motors",
-      "article_page_fetch_error": "",
-      "published_at_source": "article_page_pipeline",
-      "dom_probe": {
-        "time_datetime_attrs": [],
-        "meta_published_fields": [
-          {
-            "property": "article:published_time",
-            "content": "2026-04-27T13:00:01+00:00"
-          },
-          {
-            "property": "article:modified_time",
-            "content": "2026-04-27T13:02:31+00:00"
-          }
-        ]
-      },
-      "pipeline_published_at": "2026-04-27T13:00:01+00:00",
-      "pipeline_date_only": false
-    }
-  },
-  {
-    "title": "36氪首发｜新加坡博士团队创业获种子轮融资，首款产品做“会飞的家庭管家”",
-    "url": "https://36kr.com/p/3805672617959173?f=rss",
-    "snippet": "作者 | 乔钰杰 编辑 | 袁斯来 硬氪获悉，深圳熵约智能科技有限公司（下称“熵约科技”）日前完成数百万美元种子轮融资，本轮融资由初心资本独家投资。 熵约科技由新加坡南洋理工大学博士曾武，马来西亚理科大学博士况伟杰，清华智能产业研究院研究员万浩诚共同创立，核心团队成员来自清华大学、华中科技大学，南京航空航天大学，字节跳动，比亚迪等高校和企业，背景覆盖人工智能、理论物理与微型无人机系统。 目前，熵约科技的首款产品针对家庭空间设计，为全球首款家庭飞行机器人Flyer O1。 （图源/企业） 曾武介绍称：“家庭环境中，地面环境其实是多障碍的，设备活动受限；而空中空间相对开阔，因此我们选择从飞行形态切入。” Flyer O1主要面向欧美家庭市场，针对多成员、居住空间较大的家庭设计，定位为“智能管家”。 产品无需遥控，可在用户规定区域自主巡航并在感知异动，或在用户远程调度时完成巡查与任务执行。功能涵盖家庭成员日程识别与协调、卫生状态巡检、物品缺失识别以及多设备联动，并支持语音交互。 在具体应用中，Flyer O1可通过持续使用学习家庭物品的存储位置与采购习惯，在物资短缺时主动提醒。同时，设备支持",
-    "published_at": "2026-05-12T19:12:38+00:00",
-    "from_rss": true,
-    "published_at_probe": {
-      "article_page_fetched": true,
-      "article_page_final_url": "https://36kr.com/p/3805672617959173?f=rss",
-      "article_page_fetch_error": "",
-      "published_at_source": "article_page_pipeline",
-      "dom_probe": {
-        "time_datetime_attrs": [],
-        "meta_published_fields": [
-          {
-            "property": "article:published_time",
-            "content": "2026-05-13T03:12:38+08:00"
-          }
-        ]
-      },
-      "pipeline_published_at": "2026-05-12T19:12:38+00:00",
-      "pipeline_date_only": false
-    }
-  },
-  {
-    "title": "FCC’s DJI, Autel ban ignores how drones actually work",
-    "url": "https://dronedj.com/2026/05/12/dji-autel-drone-ban-fcc/",
-    "snippet": "If DJI and Autel Robotics drones truly pose an immediate national security threat, then why are thousands of them still flying over America every single day? more…",
-    "published_at": "2026-05-12T07:54:21+00:00",
+    "title": "New drone targeting tech counters GPS jamming threats",
+    "url": "https://dronedj.com/2026/05/18/vantor-bae-drone-gps-jamming/",
+    "snippet": "As GPS jamming and spoofing become increasingly common in modern warfare, drone operators are running into a frustrating problem: the video feed may look perfectly clear, but the geographic coordinates tied to that footage can be wildly inaccurate. That issue can make precision targeting nearly impossible, a challenge defense companies are now calling “targeting paralysis.” more…",
+    "published_at": "2026-05-18T12:39:49+00:00",
     "from_rss": true,
     "published_at_probe": {
       "article_page_fetched": false,
@@ -68,10 +16,10 @@
     }
   },
   {
-    "title": "Is the UK’s RAE(F) and SAIL Marking System Becoming an Expensive Double-Check on Drone Manufacturers?",
-    "url": "https://www.suasnews.com/2026/05/is-the-uks-raef-and-sail-marking-system-becoming-an-expensive-double-check-on-drone-manufacturers/",
-    "snippet": "The UK Civil Aviation Authority’s introduction of the Recognised Assessment Entity for Flightworthiness, or RAE(F),",
-    "published_at": "2026-05-12T18:57:14+00:00",
+    "title": "Taco Bueno brings Zipline drone delivery to Texas customers",
+    "url": "https://dronedj.com/2026/05/18/taco-bueno-drone-delivery-texas/",
+    "snippet": "Texas-based fast-food chain Taco Bueno is officially joining the growing drone delivery movement, teaming up with Zipline to bring fresh Tex-Mex meals to customers by air. more…",
+    "published_at": "2026-05-18T12:32:58+00:00",
     "from_rss": true,
     "published_at_probe": {
       "article_page_fetched": false,
@@ -84,10 +32,10 @@
     }
   },
   {
-    "title": "CubePilot France – Embedded & Safety Critical Software Engineer",
-    "url": "https://www.suasnews.com/2026/05/cubepilot-france-embedded-safety-critical-software-engineer/",
-    "snippet": "CubePilot is expanding its international footprint with the launch of CubeSafe in France, a new entity dedicated to developing certified safety solutions for the UAS industry. We are seeking an experienced Embedded Software Engineer to help lead the production of DO-178C certifiable software. If you have a background in avionics, medical, or automotive software and a passion for open-source innovation, join our team of experts in France and help shape the future of civilian unmanned systems.",
-    "published_at": "2026-05-12T14:00:05+00:00",
+    "title": "DJI, Autel drones cleared for firmware updates until 2029",
+    "url": "https://dronedj.com/2026/05/18/dji-autel-fcc-drone-firmware/",
+    "snippet": "When the Federal Communications Commission (FCC) added DJI and Autel equipment to its Covered List, many drone operators feared the move could eventually turn thousands of perfectly functional aircraft into outdated, unsupported hardware. But in a decision released earlier this month, the agency quietly hit pause on what could have become a major operational and cybersecurity headache for the US drone industry. more…",
+    "published_at": "2026-05-18T12:23:39+00:00",
     "from_rss": true,
     "published_at_probe": {
       "article_page_fetched": false,
@@ -100,11 +48,11 @@
     }
   },
   {
-    "title": "Airbility Signs Strategic MoU with Germany’s Schübeler onEDF Propulsion Technology for eVTOL Platforms",
-    "url": "https://www.suasnews.com/2026/05/airbility-signs-strategic-mou-with-germanys-schubeler-onedf-propulsion-technology-for-evtol-platforms/",
-    "snippet": "Partners to jointly develop next-generation EDF propulsion systems and pursue Korea–Germany international R&D programs Airbility",
-    "published_at": "2026-05-12T13:53:14+00:00",
-    "from_rss": true,
+    "title": "Гауляйтер окупованого Скадовська зазнав поранення в голову після атаки БпЛА",
+    "url": "https://podrobnosti.ua/2515819-gauljajter-okupovanogo-skadovska-zaznav-poranennja-v-golovu-pslja-ataki-bpla.html",
+    "snippet": "podrobnosti.ua",
+    "published_at": "2026-05-18T15:28:42+00:00",
+    "from_rss": false,
     "published_at_probe": {
       "article_page_fetched": false,
       "article_page_final_url": "",
@@ -116,11 +64,75 @@
     }
   },
   {
-    "title": "UAV Navigation–Grupo Oesía Launches VECTOR - 300, a New Autopilot Designed for Mass Production of Loitering Munitions and C",
-    "url": "https://www.suasnews.com/2026/05/uav-navigation-grupo-oesia-launches-vector-300-a-new-autopilot-designed-for-mass-production-of-loitering-munitions-and-c-uas-interceptors/",
-    "snippet": "Engineered to provide reliable GNSSdenied navigation and fully autonomous mission execution, including complex operational scenarios",
-    "published_at": "2026-05-12T13:39:33+00:00",
-    "from_rss": true,
+    "title": "وقت تیزی سے نکل رہا ہے ، ایران فوری معاہدہ کرے ورنہ اس کے پاس کچھ نہیں بچے گا ؛ ٹرمپ",
+    "url": "https://www.express.pk/story/2813649/trump-warns-clock-is-ticking-for-iran-to-reach-peace-deal-2813649",
+    "snippet": "express.pk",
+    "published_at": "2026-05-18T14:58:24+00:00",
+    "from_rss": false,
+    "published_at_probe": {
+      "article_page_fetched": false,
+      "article_page_final_url": "",
+      "article_page_fetch_error": "",
+      "published_at_source": "search_hit",
+      "dom_probe": {},
+      "pipeline_published_at": "",
+      "pipeline_date_only": false
+    }
+  },
+  {
+    "title": "Na površinu isplivala šokantna istina o ubojici iz Drniša : Nevjerojatno što je 2020 . napravio strini",
+    "url": "https://www.dnevno.hr/vijesti/na-povrsinu-isplivala-sokantna-istina-o-ubojici-iz-drnisa-nevjerojatno-sto-je-2020-napravio-strini-3304342/",
+    "snippet": "dnevno.hr",
+    "published_at": "2026-05-18T10:50:46+00:00",
+    "from_rss": false,
+    "published_at_probe": {
+      "article_page_fetched": false,
+      "article_page_final_url": "",
+      "article_page_fetch_error": "",
+      "published_at_source": "search_hit",
+      "dom_probe": {},
+      "pipeline_published_at": "",
+      "pipeline_date_only": false
+    }
+  },
+  {
+    "title": "Zwierzyna staje się myśliwym . Ukraińskie drony mogą odpowiadać Rosjanom ogniem",
+    "url": "https://forsal.pl/swiat/ukraina/artykuly/11248702,zwierzyna-staje-sie-mysliwym-ukrainskie-drony-moga-odpowiadac-rosjano.html",
+    "snippet": "forsal.pl",
+    "published_at": "2026-05-18T13:17:35+00:00",
+    "from_rss": false,
+    "published_at_probe": {
+      "article_page_fetched": false,
+      "article_page_final_url": "",
+      "article_page_fetch_error": "",
+      "published_at_source": "search_hit",
+      "dom_probe": {},
+      "pipeline_published_at": "",
+      "pipeline_date_only": false
+    }
+  },
+  {
+    "title": "Syria condemns drone attack on Saudi Arabia as threat to regional stability",
+    "url": "https://sana.sy/en/politics/2317648/",
+    "snippet": "sana.sy",
+    "published_at": "2026-05-18T13:15:11+00:00",
+    "from_rss": false,
+    "published_at_probe": {
+      "article_page_fetched": false,
+      "article_page_final_url": "",
+      "article_page_fetch_error": "",
+      "published_at_source": "search_hit",
+      "dom_probe": {},
+      "pipeline_published_at": "",
+      "pipeline_date_only": false
+    }
+  },
+  {
+    "title": "Assam receives Rs 500 crore Central incentive for mining reforms : CM Sarma",
+    "url": "https://www.prokerala.com/news/articles/a1764372.html",
+    "snippet": "prokerala.com",
+    "published_at": "2026-05-18T12:55:01+00:00",
+    "from_rss": false,
     "published_at_probe": {
       "article_page_fetched": false,
       "article_page_final_url": "",

@@ -25,7 +25,16 @@ export function EventCard({ event, index = 0 }: { event: EventListItem; index?: 
           <p className="mt-2 text-xs text-zinc-500 line-clamp-2">{event.summaryPreview}</p>
           <div className="mt-3 flex flex-wrap items-center gap-2">
             <span className="text-[10px] text-zinc-600">
-              {event.article_count} articles · QA {event.qa_score}
+              {event.seed_article_count ?? event.article_count} 主稿
+              {(event.expansion_article_count ?? 0) > 0
+                ? ` · +${event.expansion_article_count} 扩搜`
+                : ""}
+              {event.enhancement_inserted != null &&
+              event.enhancement_inserted > 0 &&
+              (event.expansion_article_count ?? 0) === 0
+                ? ` · 增强 +${event.enhancement_inserted}`
+                : ""}
+              {" · "}QA {event.qa_score}
             </span>
             {event.keywords.slice(0, 3).map((k) => (
               <Badge key={k} variant="muted">

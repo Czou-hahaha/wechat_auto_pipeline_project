@@ -27,6 +27,32 @@ def test_parse_chinese_date_only() -> None:
     assert coarse is True
 
 
+def test_parse_dot_separated_datetime() -> None:
+    iso, coarse = PipelineRunner._parse_published_raw_to_utc("2026.05.19 22:09")
+    assert iso
+    assert coarse is False
+
+
+def test_prefer_full_publish_datetime_text() -> None:
+    picked = PipelineRunner._prefer_publish_datetime_text(["21:46", "2026.05.20 19:54", "09:10"])
+    assert "2026.05.20" in picked
+
+
+def test_extract_tmtpost_article_time_from_html() -> None:
+    html = '<div class="section-article"><p class="time">2026.05.20 19:54</p></div><p class="time">21:46</p>'
+    soup = BeautifulSoup(html, "html.parser")
+    settings = MagicMock()
+    settings.his_data_sources_path = "config/data_sources.json"
+    runner = PipelineRunner.__new__(PipelineRunner)
+    runner._published_css_by_host = {
+        "tmtpost.com": [".section-article .time", ".post_left .time", ".time", "span.time"]
+    }
+    runner.settings = settings
+    iso, coarse = runner._extract_published_at(soup, page_url="https://www.tmtpost.com/7995553.html")
+    assert iso.startswith("2026-05-20")
+    assert coarse is False
+
+
 def test_extract_faa_drupal_mb4() -> None:
     html = (
         '<div class="node__content mt-0 clearfix">'

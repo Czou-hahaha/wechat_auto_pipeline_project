@@ -1,0 +1,664 @@
+# Scratchpad
+
+## Current task (2026-05-20 · 事件详情参考稿 UI)
+- [X] 合并扩充+聚类为「参考稿」底部固定高度可滚动列表（相似度条+原文链接）
+- [X] 顶部仅展示溯源主稿 1 篇；通稿区保留〔n〕阅读引用
+- [X] 推送/保存与 `summary_html` 剥离 〔n〕/【n】 不进草稿 digest
+
+## Current task (2026-05-20 · 设置页简化 + BFF 常驻)
+- [X] BFF 已启动 :8787；设置页数据源改表格+弹窗编辑；关键词仅中英
+- [X] 定时可配 article_age_hours；去掉 BFF/命令行提示；顶栏去掉连接状态
+
+## Current task (2026-05-20 · 前端对齐 + 手动采集按钮)
+- [X] BFF `POST/GET /api/pipeline/run-once|status` 后台 subprocess run-once
+- [X] platform 顶栏 + Dashboard「开始采集搜索」、完成后自动刷新
+- [X] `event_mapper` 无通稿时回退簇内摘要；`test_pipeline_run.py`
+
+## Current task (2026-05-20 · 草稿推送后清空正文)
+- [X] `STRIP_EXTRACTED_TEXT_AFTER_WECHAT_DRAFT`（默认 true）
+- [X] `storage.clear_extracted_text_for_event/article`；`pipeline` 在 `wechat_draft_pushed_at` 成功后触发
+- [X] `tests/test_strip_body_after_draft.py`；上线前校验标准补充说明
+
+## Current task (2026-05-20 · 摘要最低 800 字，不足不发布)
+- [X] 默认 `CLUSTER_SUMMARY_MIN_CHARS=800`（config / .env / .env.example）
+- [X] `summary_visible_char_count` + pipeline `skipped_too_short` + QA `summary_length_under_800`
+- [X] `news_single_summary.md`、上线前校验标准、全流程验收文档同步
+
+## Current task (2026-05-20 · 中文源 published_at + 关键词跑一遍)
+- [X] `pipeline.py`：点分日期、`._prefer_publish_datetime_text`、钛媒体 scoped `.time`
+- [X] `html_list_monitor.py`：36kr/tmtpost/huxiu/jiemian/yicai 文章路径
+- [X] `data_sources.json`：各中文源 `published_at_css`
+- [X] `run_zh_sources_keywords_once.py` + `probe_zh_sources_published_at.py` + `data/probe_zh_published_at_report.md`
+- [ ] 本机执行 `run_zh_sources_keywords_once`（当前沙箱 python/pytest 启动挂起，需用户终端跑）
+
+## Current task (2026-05-20 · 英国无人机重跑)
+- [X] `resummarize_uk_event.py`：恢复 UK 事件 + 刷新 published_at + 簇摘要推微信
+- [X] `ai.py` 簇摘要 `_chat_json` max_tokens 增至 `max_chars+1200`（避免 JSON 截断 fallback）
+- [X] `pipeline.py` 支持 `2026.05.19 22:09`；钛媒体 `published_at_css`
+
+## Current task (2026-05-20 · 摘要 prompt：高亮/国内参照/可读性)
+- [X] `summary_editorial_rules.md` + `cluster_summary_user.md`：禁止口径不一致元叙述；`<strong>` 整句高亮；海外稿国内参照；时间轴写全
+- [X] `summary_html.py` + `wechat.py`：草稿保留 strong；`test_summary_html.py`
+
+## Current task (2026-05-19 · 英文扩搜与摘要门槛)
+- [X] 英文 event 名 ≤20 词（`format_english_event_title`）；扩搜 query 不拼「低空经济」
+- [X] 英文扩搜 GDELT→RSS→DDGS（`expansion_gdelt_en_enabled: true`）
+- [X] `max_articles_per_event: 10`；`min_articles_for_summary: 2`（不足则 skip summary）
+- [X] 测试 `test_gdelt_query_short` / `test_expansion_lang_routing` 13 passed
+
+## Current task (2026-05-19 · run-once 性能优化)
+- [X] `topic_prefilter.py`：GDELT 命中抓正文前标题+摘要过滤
+- [X] `DEEPSEEK_CLUSTER_CONCURRENCY=3` 簇摘要+QA 并行（推微信时强制 1）
+- [X] 英文扩搜默认 RSS→DDGS（`expansion_gdelt_en_enabled: false`）
+- [X] `HTML_LIST_TIMEOUT_SEC=20`；GDELT 词表去掉 air taxi/BVLOS
+- [X] QA `qa_invalid_output` 自动重试 1 次
+- [X] importance Top3 选簇 + 3 日冷却；全流程跑通（QA 0/3；微信 IP 40164 未推）
+
+## Current task (2026-05-18 · GDELT 请求架构加固)
+- [X] `event_enhancement/gdelt/http_core.py`：全进程 5s 限速、退避 5/10/20、JSON 安全解析、30min 磁盘缓存
+- [X] V3 `gdelt_search` / `search_gdelt_topics_bilingual` 接入 http_core；默认 `GDELT_TIMESPAN=1h`、timespan 上限 24h
+- [X] 扩搜 query 去掉 sourcelang；`expansion.yaml` max_concurrent=1、interval=5；event 扩搜串行
+- [X] `data/gdelt_ingest/latest.json` 快照；`tests/test_gdelt_http_core.py` 等
+
+## Current task (2026-05-17 · 调参/并行/扩搜语言路由)
+- [X] `lang_detect.py` + `expansion_sources_for_event_lang`；zh 跳过 GDELT，en `sourcelang:english`
+- [X] `event_enhancement_json.py`：2 event 并行 + URL fetch semaphore(5)；PG `expansion.py` 对称
+- [X] `expansion.yaml`：search_attempts=2、max_events=15、gdelt max_retries=2、并发配置
+- [X] `.env` GDELT_MIN_INTERVAL=5、MAX_PUBLISH_PER_RUN=8；`.env.example` 注释
+- [X] BFF/前端 `eventLang`/`gdeltSkipped`；`tests/test_expansion_lang_routing.py`
+- [X] acceptance：run-once ~27min（增强 ~6.5min）；smoke 12/12；fixture 验证 zh 跳过 GDELT
+
+## Current task (2026-05-17 · 增强前端展示 + 上线冒烟)
+- [X] BFF `enhancement` DTO + `sourceKind` seed/expansion；事件详情「阶段三·事件增强」卡片
+- [X] `max_events_per_run: 20`；`EMBEDDING_CLUSTER_ENABLED=true`；Dashboard 真实 topicTrend
+- [X] `scripts/acceptance_smoke.py` 12/12；pytest 36 passed
+
+## Current task (2026-05-17 · 簇级向量合并替代关键词软合并)
+- [X] 删除 `_merge_soft_policy_clusters` / `_policy_drone_ban_pack` 枚举
+- [X] `ingest_cluster.merge_clusters_by_embedding`：`EMBEDDING_ENABLED` 即可，冷启动与全量向量路径批末均调用
+- [X] `tests/test_merge_clusters_by_embedding.py`；更新 `docs/入库与事件聚类流程.md`
+
+## Current task (2026-05-17 · published_at 补全 + GDELT 英文串行)
+- [X] `src/utils/search_published_at_backfill.py`；`run_once` 在 `filter_by_age` 前补全落地页时间
+- [X] GDELT：默认仅 `english_keywords`、一词一请求串行、`GDELT_CHINESE_ENABLED=false`、`trust_env=False`、间隔≥1s
+- [X] `run_search_flow` 与 `.env.example` / `V3/.env` 同步；`tests/test_gdelt_search_serial.py`
+
+## Current task (2026-05-17 · V3 .env 从 V1 迁入)
+- [X] 创建 `V3/.env`：DeepSeek / 微信正式号 / 调度与发布参数与 V1 对齐；补齐 V3 专有项（扩搜、通稿、QA、RSS/GDELT）
+- [X] 测试 A：demo→data/，BFF :8787 全接口 OK；platform :3000 经 BFF 返回 demo 事件（QA 95、通稿 1568 字、grounding 9 段）
+- [X] 测试 B：run-once（`RUN_ONCE_PUSH_TO_WECHAT=false`，~8.5min）：RSS 31 条→14h 窗后 candidates=0；阶段三扩搜对 demo 事件 +1 篇；未推微信
+- [ ] 测试 C：push-today-drafts
+
+## Current task (2026-05-16 · 模块五 QA 流程图)
+- [X] `V3/docs/AI通稿质量控制模块流程.md`（衔接图 + 内部循环图 + 配置/落库/测法）；链到阶段四/三总览与 `docs/prompts/README.md`
+
+## Current task (2026-05-16 · 模块五 QA + 条件重写 + 承接阶段四)
+- [X] `qa_rewrite/` 包 + `QA_REWRITE_*` 配置
+- [X] `event_press_workflow`：阶段四生成后默认跑阶段五（`QA_REWRITE_ENABLED`）；`article_rows_to_qa_sources`；`events.json` 写 `event_press_qa_*`
+- [X] `tests/test_event_press_qa_chain.py`；fixture 实跑：score=95、`passed_threshold`、rewrites=0
+
+## Current task (2026-05-16 · 模块五 QA + 条件重写)
+- [X] `V3/src/services/qa_rewrite/`：`qa_service.py`、`rewrite_service.py`、`pipeline.py`、`prompts/qa_system.txt`、`rewrite_system.txt`、`json_utils.py`、`context_pack.py`；复用 `DeepSeekChatClient`；`Settings` 增加 `QA_REWRITE_*`；`tests/test_qa_rewrite_json.py`；`tests/integration/run_qa_rewrite_mvp.py`；`.env.example`
+
+## Current task (2026-05-15 · Prompt 外置 docs/prompts + skill)
+- [X] `V3/docs/prompts/`：`event_press_*`、`news_single_*`、`cluster_summary_*`、`qa_review_system`；`prompt_load.py`；`prompt_builder` / `ai.py` 从文件加载；`summary_prompt.md` 跳转；`.cursor/skills/zh-news-from-prompts`；测试 `test_prompt_load.py`
+
+## Current task (2026-05-15 · summary_prompt 与编辑体例合并)
+- [X] `V3/docs/summary_prompt.md`：并入用户「中国科技产业与政策方向专业编辑」多源成稿体例；冲突以用户稿为准；保留 `{{MAX_CHARS}}`；区分「通稿无 markdown」与公众号 `**` 例外；注明 `summarize_cluster` 仍读 `ai.py` 硬编码
+
+## Current task (2026-05-14 · 扩搜 query 中文单条 + DDGS 可选)
+- [X] `build_gdelt_query_strings`：主锚+事件名 AND、仅 sourcelang:chinese；`max_retries:3`；`web_search_backend`；`collect_expansion_hits`；修复 `event_enhancement_json` 中 `fetch_client`；pytest
+
+## Current task (2026-05-14 · 重试阶段三 JSON + GDELT/代理)
+- [X] 复跑集成；代理下 GDELT TLS EOF → **GDELT 专用 `httpx.AsyncClient(trust_env=False)`**（与抓取客户端分离）；`V3/tests` 全绿
+
+## Current task (2026-05-16 · 模块四流程图 + fixture 测通稿)
+- [X] `V3/docs/AI事件通稿生成模块流程.md`（Mermaid）；`tests/integration/run_event_press_fixture.py`；`事件搜索增强模块流程.md` 增加模块四链接
+
+## Current task (2026-05-15 · AI 中文事件通稿 / 阶段四)
+- [X] `V3/src/services/ai_press_writer/`：`deepseek_client.py`、`prompt_builder.py`、`article_selector.py`、`ai_writer_service.py`
+- [X] `event_press_workflow.py` + `pipeline` 在阶段三后调用；`EVENT_AI_PRESS_*` + `EventRecord.event_press_zh`
+- [X] `main.py`：`generate-event-press`（`force=True`）；`.env.example`；`tests/test_article_selector_press.py`
+
+## Current task (2026-05-14 · 历史 fixture 跑阶段三)
+- [X] `tests/integration/run_event_enhancement_fixture.py`：beijing（或 `--fixture-dir`）复制→hydrate→touch 时间→`run_event_enhancement_post_pipeline`；`tests/test_event_enhancement_hydrate.py`；`tests/__init__.py`；README + `事件搜索增强模块流程.md`
+
+## Current task (2026-05-14 · run_once 阶段三全出口 + 测试 + 文档)
+- [X] `run_once`：`all_hits` 为空与日配额 `publish_limit<=0` 的提前 `return` 前调用 `_run_mandatory_event_enhancement_post_pipeline`，与文末正常出口一致
+- [X] 修复 `_parse_published_raw_to_utc` 中 `re.sub` 参数顺序错误（FAA `mb-4` 用例）
+- [X] `pytest`：`V3/tests` 8 passed；`event_enhancement/tests` 2 passed（conda python3）
+- [X] 文档：`V3/docs/事件搜索增强模块流程.md`（Mermaid + 简要说明）
+
+## Current task (2026-05-14 · 事件增强：MVP + 嵌入 V3 run_once)
+- [X] [`event_enhancement/`](event_enhancement/)：PostgreSQL + Alembic + CLI；[`V3/src/event_enhancement_workflow.py`](V3/src/event_enhancement_workflow.py) + `pipeline.run_once` 末尾钩子；`EVENT_ENHANCEMENT_*` 配置与文档
+
+## Current task (2026-05-14 · 入库文档：去重流程图)
+- [X] `docs/入库与事件聚类流程.md`：Mermaid 全流程图 + 图例表 + 冷启动/向量路径说明
+
+## Current task (2026-05-14 · 测试资产迁入 tests/ + 检索→去重衔接验证)
+- [X] 集成 CLI → `tests/integration/run_*.py`；测试产出 → `tests/data/search`、`tests/data/fixtures`、`tests/data/dedupe_runs`；`verify_search_dedupe_chain.py`；已移除 `V3/` 根目录 `test_*.py` 薄封装；`tests/README.md`、文档与 `.env.example` 路径更新
+
+## Current task (2026-05-14 · HTML 解码修复 + 北京同题重跑)
+- [X] `utils/http_decode.py` + `pipeline._decode_html`；`html_list_monitor` 复用；`charset-normalizer` 写入 requirements
+- [X] `tests/integration/run_embedding_urls_ingest.py` 重跑，`tests/data/dedupe_runs/beijing` 产出更新
+
+## Current task (2026-05-14 · 北京无人机同题五链测试)
+- [X] `tests/data/fixtures/beijing_drone_dedupe_test_input.json` + `tests/integration/run_embedding_urls_ingest.py`：抓取→`build_embedding_event_clusters_with_report`→独立目录落库（占位摘要，无大模型）
+
+## Current task (2026-05-14 · 去重报告给人看)
+- [X] `tests/integration/run_saved_search_dedupe_report.py`：默认写 `*_阅读摘要.md`（Markdown），终端同步打印；`--summary-out` / `--no-print-summary`
+
+## Current task (2026-05-14 · V3 本机 bge-m3 免 KEY 向量)
+- [X] `embed_dedupe`：`fetch_embeddings_batch`（local sentence-transformers / http OpenAI）；`transformers<4.46` 与常见 torch 2.2 兼容
+- [X] `ingest_cluster` / `tests/integration/run_fetch_embed_dedupe.py` / `run_saved_search_dedupe_report.py` 接入；`.env.example` 与文档更新
+
+## Current task (2026-05-13 · V3 去重/聚类/落库闭环实装)
+- [X] trafilatura 正文抽取 + 回退；`lxml_html_clean` 依赖；`utils/article_extract.py`
+- [X] `ingest_cluster`：转载阈值 + 同事件并查集；`EMBEDDING_CLUSTER_ENABLED` 接入 `run_once`
+- [X] `events.json` / `event_article_map.json`；`ArticleRecord.event_id` / `summary_zh`；事件摘要中译
+- [X] 文档 `docs/入库与事件聚类流程.md`；检索流程图 NEXT 节点；`tests/test_article_extract.py`
+
+## Current task (2026-05-13 · V3 检索：无 published_at 不进候选 + 流程说明)
+- [X] `filter_by_age`：`published_at` 空/不可解析一律剔除；`max_hours<=0` 仅取消小时窗仍须可解析时间
+- [X] `tests/integration/run_fetch_embed_dedupe.py` 报告说明同步；`run_search_flow` 文档注释
+- [X] 检索模块 Mermaid 落盘：`V3/docs/检索模块流程图.md`
+
+## Current task (2026-05-13 · V3 检索文章步骤实跑)
+- [X] `tests/integration/run_search_flow.py`：`SEARCH_KEYWORDS_PATH=tests/data/fixtures/tmp_search_keywords_smoke.json` + `SEARCH_LOAD_HIS_DATA_SOURCES=false`；RSS 29→12h 后 5 条；GDELT 空体/429→0 条；结果 `tests/data/search/test_search_results.json`
+
+## Current task (2026-05-13 · V3 发布时间：分层提取 + RSS + 日历窗)
+- [X] rss_aggregate：非 RFC822 pubDate（36kr `YYYY-MM-DD HH:MM:SS`）； naive 按 Asia/Shanghai
+- [X] pipeline：`_parse_published_raw_to_utc` + ld+json 扩展键 + script/`__NEXT_DATA__` + `published_at_css` + 区域兜底；`_fetch_text` 返回 date_only；`_published_at_within_window` 日历窗；ArticleRecord/PreparedArticle 字段
+- [X] ai：QA 确定性时间与 pipeline 对齐；修复 `fallback_prefix_【摘要】` 返回键
+- [X] data_sources 36kr `published_at_css`；config `DATE_ONLY_MAX_CALENDAR_AGE_DAYS`；`.env.example`；`docs/上线前文章校验标准.md`；`tests/test_published_at.py`；含此前英文长日期/FAA `mb-4` 路径
+
+## Current task (2026-05-13 · V3 检索 build：RSS+主题 GDELT)
+- [X] config：RSS/GDELT 新开关；parsed_chinese/english_keywords
+- [X] gdelt_search：OR 组句 + 复用 client 的 doc 调用
+- [X] search：search_gdelt_topics_bilingual（限速、429、空结果不重试）
+- [X] pipeline：run_once 默认主题 GDELT；中文日期与 36kr item-time 解析
+- [X] rss_aggregate：按 language 用词表过滤；多 pub 字段
+- [X] data_sources 去掉 search_keywords；search_keywords.json 收紧
+- [X] .env.example、`tests/integration/run_search_flow.py`、compileall
+
+## Current task (2026-05-13 · V3 栏目页替代失效 RSS)
+- [X] `html_list_monitor`：栏目 GET + BS4 抽链 + 站点/路径启发式；栏目抓取不做关键词过滤；工信部 `art_` URL；合并顺序栏目先于 RSS；栏目 HTTP 超时 max(25,60)
+- [X] `data_sources.json`：13 条失效 RSS → `ingest_mode: html_list` + `list_monitor_url`；保留 5 条可用 RSS
+- [X] `RSS_TOTAL_MAX` 默认 500 + `.env.example` 说明
+
+## Current task (2026-05-13 · V3 run_search_flow 当前逻辑实跑)
+- [X] `python3 tests/integration/run_search_flow.py`（默认 12h、`config/search_keywords.json`、`data_sources` RSS + 主题 GDELT）：RSS 原始 28→12h 后合并侧 5 条；GDELT 中英各 1 批共 6 次 HTTP 均解析失败→0 条；终态 RSS=5、GDELT=0，已写 `tests/data/search/test_search_results.json`
+
+## Current task (2026-05-13 · V3 搜索流程实跑 12h)
+- [X] 在 V3 执行搜索流程测试（12h）：全量 `config/search_keywords.json`+18 站点 GDELT 扇出易 429/极慢，已用 smoke 关键词文件 + `SEARCH_LOAD_HIS_DATA_SOURCES=false` 跑通并收集输出
+
+## Current task (2026-05-12 · V3 聚类多源摘要流水线)
+- [X] run_once：本批全局去重 → 按 topic_key 聚类 → 政策同窗软合并（CLUSTER_MERGE_HOURS）→ 簇内去重 → summarize_cluster → QA/入库
+- [X] config `CLUSTER_MERGE_HOURS`、ArticleRecord `cluster_size`/`synthesis_multi_source`、`ai.summarize_cluster`
+- [X] `.env.example` 文档化；compileall + `--help` OK
+
+## Current task (2026-05-12 · V3 初始化：从 V1 复制可跑通核心)
+- [X] 创建 V3 目录结构 (src/, config/, docs/, data/)
+- [X] 复制 V1 核心源码到 V3/src/ (main/config/search/ai/pipeline/storage/wechat)
+- [X] 复制 V1 配置文件到 V3/config/ (data_sources.json, search_keywords.json)
+- [X] 复制 V1 文档到 V3/docs/ (summary_prompt.md, 上线前文章校验标准.md)
+- [X] 生成清理后的 .env.example（去掉 V1 中 AI Builder/Gemini 等已废弃字段）
+- [X] 复制 .gitignore, requirements.txt, 封面测试图
+- [X] 初始化空 data/articles.json
+- [X] 编译校验通过 + import check OK + CLI --help OK
+- [ ] 后续：配置 .env 后即可 `python -m src.main run-once` 跑通全链路
+
+## Current task (2026-05-01 · 正式账号连通性复核)
+- [X] 确认正式账号配置已切换（appid/appsecret/original id 可被 `Settings` 正确读取）。
+- [X] 微信接口鉴权验证：`token` 获取成功（避免 41004）。
+- [X] 调度常驻与时间核对：`08:00/20:00`、`Asia/Shanghai`。
+- [X] 发现并修复 `search_keywords.json` 非法 JSON（注释导致解析失败、回退到单 query）。
+- [X] 复测关键词加载：`site_queries=8`、`global_queries=15`。
+
+## Current task (2026-05-01 · 正式上线参数固化)
+- [X] 固化调度时间：`SCHEDULE_MORNING_HOUR=8`、`SCHEDULE_EVENING_HOUR=20`。
+- [X] 固化发布时间窗口：`MAX_ARTICLE_AGE_HOURS=14`。
+- [X] 固化发布上限：`MAX_PUBLISH_PER_RUN=5`（单次）+ `MAX_PUBLISH_PER_DAY=10`（自然日总量）。
+- [X] 增加“自然日总量封顶”逻辑：早晚两次合计不超过 10 篇（不是单次各 10）。
+- [X] 切换正式发布开关：`RUN_ONCE_PUSH_TO_WECHAT=true`。
+- [X] 重启 `run-scheduler` 并验证新配置已生效。
+
+## Current task (2026-05-01 · 正式发布前检查与重复推送修复)
+- [X] 审核调度/检索/过滤/QA/发布链路当前配置，确认是否满足“站点优先 -> 全域回退 -> 规则门禁 -> QA -> 发布”。
+- [X] 修复潜在重复推送：`run-once` 自动发布成功后写入 `wechat_draft_pushed_at`，避免后续 `push-today-drafts` 再次推送同条。
+- [ ] 最终上线动作：设置 `RUN_ONCE_PUSH_TO_WECHAT=true` 并重启 `run-scheduler` 让新代码与新配置生效。
+
+## Current task (2026-05-01 · DeepSeek复核识别快讯拼盘)
+- [X] 在 DeepSeek 复核中加入“快讯/多领域拼盘”硬失败规则（不仅依赖前置规则）。
+- [X] 对“5月起，这些新规将影响你我生活”同类型文本做复核回放，确认判定不通过。
+- [X] 同步日志输出，能看到被 DeepSeek 复核拦截的明确原因（`roundup_or_fastnews_not_domain_primary`）。
+
+## Current task (2026-05-01 · DeepSeek自动复核上线并实跑发布)
+- [X] 接入主链路：规则硬门禁通过后，调用 DeepSeek 复核摘要与发布标准。
+- [X] 复核不通过直接拦截，不入草稿箱；复核通过才允许入草稿箱（run-once + push-today-drafts 双链路）。
+- [X] 按新链路实跑发布：`push-today-drafts --local-date 2026-05-01` 已推送 1 篇合格稿（id=`7ff84e3f-...`）。
+
+## Current task (2026-05-01 · 草稿箱错误稿回滚清理)
+- [X] 定位“还是推了两篇”的根因：`5月起，这些新规将影响你我生活` 在 08:23 被旧规则漏放行并推入草稿箱。
+- [X] 规则加固：`_NEWS_ROUNDUP_TITLE_RES` 补充 `这些新规将影响` / `影响你我生活`。
+- [X] 本地库清理：`clean-library` 删除该条（digest 类）。
+- [X] 公众号草稿箱清理：删除该条与历史 4 条新规合集稿，仅保留合格稿。
+
+## Current task (2026-05-01 · 剔除新闻快讯/多领域汇总稿)
+- [X] 增加硬门禁：新闻快讯类标题与“新规合集”多领域汇总稿一律不入库不发布。
+- [X] 同步到历史清理：执行 `clean-library` 去除已入库的此类不合格文章（`removed=4`, `digest=4`）。
+- [X] 复核你点名的两篇（`重磅新规落地...`、`新规来了...`）已被清除。
+
+## Current task (2026-05-01 · 抽检前不自动推公众号)
+- [X] 增加开关：`run-once` 默认/可配置为“只入库待抽检，不调用公众号 draft/add”。
+- [X] 抽检后再手动发布：沿用 `push-today-drafts` 作为人工确认后的发布动作。
+- [X] 回归验证（关闭开关）：`published=0`，本轮未触发公众号推送；若命中 fallback/重复则会被拦截。
+
+## Current task (2026-05-01 · 扩窗48h拿1篇人工抽检样本)
+- [X] 以 `MAX_ARTICLE_AGE_HOURS=48` 执行 run-once，获取 1 篇可发布样本（`published=1`）。
+- [X] 核验样本：同领域主焦点 + 发布时间在48h窗口 + 摘要非fallback且满足 summary prompt 关键项。
+- [X] 输出抽检样本（标题/来源/发布时间/摘要质量判断）。
+
+## Current task (2026-05-01 · V1 全流程跑通 + 三项强约束验收)
+- [X] 执行一次可收敛的 `run-once` 全链路（search -> filter -> summary -> wechat draft -> storage）。
+- [X] 验证发布时间窗口：本次命中的 `source_published_at` 均在 14h 内（窗口门禁正常生效）。
+- [X] 新增硬门禁：fallback 摘要（`【摘要】`）不允许发布；并新增“多领域混合新规稿”主焦点拦截。
+- [X] 产出结论：链路可跑通；在“同领域 + 严格摘要”口径下，当前窗口可能返回 0 合格稿件属正常。
+
+## Current task (2026-05-01 · V1 上线前校验标准文档 + 无稿不发)
+- [X] 新增 `V1/docs/上线前文章校验标准.md`，固化时间窗/主题范围/排除项/发布前复核/无稿策略。
+- [X] `push-today-drafts` 增加 `source_published_at` 时间窗校验，超窗稿不再推草稿箱。
+- [X] `run_once` 在无检索结果时改为返回 `published=0`，不抛异常中断。
+- [X] 回归验证：`push-today-drafts eligible=0`，`run_once published=0`（无硬凑）。
+
+## Current task (2026-05-01 · V1 入库质量修复与历史库清理)
+- [X] `pipeline` 增加范围闸门：排除娱乐/游戏/百科/企业介绍/纯科普/站点壳层页面；发布前再做一次复核。
+- [X] 发布时间改为硬门禁：仅信任页面发布时间（不再回退搜索时间），提取不到直接跳过；并扩展正文日期模式抽取。
+- [X] 站点一致性校验：专业站点阶段要求落地域名匹配目标站点（含子域），防止 `site:` 泄漏。
+- [X] 新增命令 `python -m src.main clean-library`，按当前规则严格重扫 `V1/data/articles.json`。
+- [X] 已执行清理：先删 98 条，再删 1 条，反例（黑夜告白/Roblox/天鹰兄弟/深度科普/“低空经济”发展一年间）均已不在库中。
+
+## Current task (2026-05-01 · V1 交付前调度与全链路保障)
+- [X] 重启 `run-scheduler` 让最新代码生效，并确认进程存活与日志启动信息正常。
+- [X] 手动执行一次 `run-once` smoke 验证整链路可运行（`exit_code=0`，Google RSS 检索成功并走完整流程到统计收敛）。
+- [X] 复核 `scheduler.log` 最近输出，确认今早触发窗口配置正确（08:00 Asia/Shanghai）。
+
+## Current task (2026-05-01 · V1 data_sources 改为本地 config 引用)
+- [X] 对齐 `his/data/data_sources.json` 与 `V1` 当前引用关系。
+- [X] 新增 `V1/config/data_sources.json`，内容与 `his/data/data_sources.json` 完全一致。
+- [X] `V1/src/config.py` 默认路径改为 `config/data_sources.json`（仍兼容 `HIS_DATA_SOURCES_PATH` 覆盖）。
+
+## Current task (2026-05-01 · V1 指定回归：phase1 全量站点词，phase2 仅 local_policy)
+- [X] 用临时关键词文件执行一次 `run_once`：phase1 跑 `site_core_keywords`（测试集 2 词）；phase1 全空后进入 phase2。
+- [X] phase2 仅保留 `local_policy` 关键词，其余全域分类词置空。
+- [X] 记录整链路结果（`candidates=1 published=0 skipped_policy=1 failed=0`）与关键日志（phase1 全空 -> phase2 本地政策词全部命中 Google RSS）。
+
+## Current task (2026-04-30 · V1 专业站点核心词与全域词拆分)
+- [X] 复核现状：当前同一批检索词同时用于“目标站点检索 + 全域回退”，专业站点召回容易被长查询约束。
+- [X] 配置改造：`V1/config/search_keywords.json` 新增 `site_core_keywords`，用于专业站点核心泛化词检索。
+- [X] 逻辑改造：`run_once` 改为两阶段检索：先“站点+核心词”；仅当站点阶段全空时，才跑全域分类词库。
+- [X] 文档同步：`V1/README.md`、`V1/.env.example` 补充关键词双层策略说明。
+- [ ] 运行一次 `run-once` 观察日志中 phase1/phase2 命中占比，按结果微调 `site_core_keywords`。
+
+## Current task (2026-05-01 · V1 site_core_keywords 全量词 + 发布时间硬门禁)
+- [X] 按用户口径回滚：phase1 使用全部 `site_core_keywords`，不是单关键词。
+- [X] DDGS 缺少时间时改为抓落地页提取发布时间；提取失败或超出窗口直接跳过，不入库不入草稿。
+- [X] phase2 保持 Google News RSS 全网优先，DDGS 仅作为回退。
+- [ ] 跑一次回归，检查 `skip by published_at guard` 与 phase1/phase2 命中分布是否符合预期。
+
+## Current task (2026-04-30 · V1 source_published_at 与非目标站混入修复)
+- [X] 定位 `source_published_at` 被写成当天时间的根因并修复（DDGS 无日期不再写当前时间）。
+- [X] 增加低空/无人机主题相关性门禁，阻止非新闻营销站入草稿链路（并修复 `HUAMING` 命中 `uam` 子串误判）。
+- [X] 给出一次最小化测试方案：仅“无人机”关键词 + 目标站点优先。
+
+## Current task (2026-04-30 · V1 重要topic语义聚合 + 调度稳定化)
+- [X] 调度器改为稳定常驻：旧孤儿进程清理；以 `nohup python -m src.main run-scheduler` 启动；日志落地 `V1/data/scheduler.log`。
+- [X] 运行时参数回调：`V1/.env` 改为 `SCHEDULE_MORNING_HOUR=8`、`SCHEDULE_EVENING_HOUR=20`、`MAX_PUBLISH_PER_RUN=21`。
+- [X] `config` 支持读取 `his/data/data_sources.json` 并并入 `parsed_target_sites`（高质量站点优先）。
+- [X] `search` 改为：先跑 target sites；仅当 target sites 结果全空时才跑全网；工具链简化为 Google 快速尝试 -> DDGS。
+- [X] `pipeline` 新增观点/导刊过滤、正文 `<400` 过滤、重要topic DeepSeek 判定、非重要语义去重、重要topic 组团发布（每天最多 7 组）。
+- [X] `ai` 新增 DeepSeek 语义工具：topic 分类、语义重复判定、摘要质量二次重写（>=400、首段改写、重合度<=60）。
+- [ ] 做一次完整 `run-once` 长链路回归并人工抽样“北京禁飞禁售”同语义去重结果。
+
+## Current task (2026-04-30 · V1 分类检索词 + 快餐稿过滤)
+- [X] 新增 `V1/config/search_keywords.json`（与 `his` 同结构）；`Settings.parsed_queries` 优先读 `SEARCH_KEYWORDS_PATH`，失败回退 `SEARCH_QUERIES`。
+- [X] `run_once` 单条检索无结果时 warning 继续，全空才抛错。
+- [X] `pipeline`：`skipped_digest` + `_is_low_signal_digest_column`（科技早报等）；`JsonStore.titles_duplicated` 增加长公共子串判重。
+- [X] README / `.env.example` 补充说明。
+
+## Current task (2026-04-30 · V1 去重与乱码稿加固)
+- [X] `titles_duplicated`：前缀型长标题（通稿加长版）单独放宽判重；同轮 `seen_search_title_norms` / `processed_title_norms` 改为 `titles_duplicated` 比对。
+- [X] `exists_duplicate`：正文规范化后前 900 字相似度 ≥0.82 判重（补转载稿）。
+- [X] `search`：`SEARCH_SOURCE_BLOCKLIST` 含 `rfi.fr`；`pipeline` 落地 host 再拦 + `_is_probable_charset_garbage`；`RunStats.skipped_encoding` 与 `main` 日志字段。
+- [X] README 口径同步。
+
+## Current task (2026-04-30 · V1 手动全链路 run-once)
+- [X] 用户未跑定时时手动执行 `python -m src.main run-once`：search→摘要→草稿箱→入库；本次 `published=10 skipped_duplicate=4 failed=1`（1 条抓取 403）。
+- [X] 首图上传失败日志去掉 `exc_info=True`，避免与未捕获异常混淆。
+
+## Current task (2026-04-30 · V1 push-today-drafts 不搜库直写草稿箱)
+- [X] 新增 `push-today-drafts`：按 `SCHEDULE_TIMEZONE` 本地日筛 `articles.json` 的 `created_at`，用已有 `summary` 调 `draft/add`，写 `wechat_draft_pushed_at` 防重复。
+- [X] 支持 `--local-date YYYY-MM-DD`；`JsonStore.patch_article` 供打标。
+- [X] 本机跑通：`push-today-drafts` 当日库内 0 条时日志 `eligible=0`；README 已补充用法。
+
+## Current task (2026-04-30 · V1 run-once 写入 env 公众号草稿箱)
+- [X] 在 `V1/` 执行 `python -m src.main run-once`（使用 `V1/.env` 公众号与检索配置）。
+- [X] 微信 `access_token` 返回 `40164`：当前出口 IP 未在公众平台 IP 白名单，流程在取 token 阶段终止。
+- [X] `V1/src/main.py`：`logging.getLogger("httpx").setLevel(WARNING)`，避免 token 请求 URL 带 `secret` 被 INFO 打日志。
+
+## Current task (2026-04-30 · V2 前端审核页 MVP)
+- [X] 新增 `src/api.py`（FastAPI）：`/api/review/queue`、`/api/review/{id}`、`/approve`、`/rewrite`。
+- [X] 新增 `src/review_service.py`，抽离人工通过与手动重写复检逻辑，供 API 复用。
+- [X] 新增 `web/index.html` + `web/app.js`，实现队列/详情/操作的最小审核页面。
+- [X] `src/main.py` 增加 `run-api` 命令，`requirements.txt` 增加 `fastapi`/`uvicorn`。
+- [X] 更新 `V2/README.md` 与 `V2/PRD.md`，补充审核页 MVP 使用说明与功能边界。
+
+## Current task (2026-04-30 · V2 审核上下文对齐)
+- [X] `V2/src/qa.py` 审核 prompt 注入 `summary_prompt` 核心约束，确保生成/审核同标准。
+- [X] Qwen 输出 schema 升级为结构化 `issues`（问题片段/证据/改写动作/示例）。
+- [X] `revision_prompt` 改为由结构化 issues 驱动，而非仅 reasons 拼接。
+- [X] `V2/src/ai.py` 的 `rewrite_summary` 显式复用摘要规范，避免重写轮风格漂移。
+- [X] `V2/docs/qa_result_schema.md` 补充 issues 字段与“审核上下文对齐”口径。
+
+## Current task (2026-04-29 · V2 人工队列报告策略收敛)
+- [X] 新增配置 `QA_MANUAL_QUEUE_REPORT_ENABLED`，默认 `false`（生产不落地 MD）。
+- [X] `pipeline` 按开关决定是否生成人工审核队列 MD 报告。
+- [X] `main` 日志增加 `manual_queue_report_mode`，明确当前报告模式。
+- [X] `qa_result_schema` 文档同步：MD 报告为调试可选能力，生产默认关闭。
+- [X] 完成开关开启/关闭双态验证。
+
+## Current task (2026-04-29 · V2 双Agent单轮闭环 + 人工队列)
+- [X] `V2/src/ai.py` 增加 `rewrite_summary`，支持根据 `revision_prompt` 单轮重写摘要。
+- [X] `V2/src/pipeline.py` 改为“首检 ->（未过则重写）-> 复检”的固定1轮闭环。
+- [X] 发布闸门改为仅 `final_decision=auto_pass` 自动入草稿箱；未通过标记 `needs_manual_review`。
+- [X] `V2/src/storage.py` 扩展首检/复检轨迹字段与 `final_decision`、`rewrite_applied`。
+- [X] 新增 `V2/src/manual_queue_report.py`，每次运行输出人工审核队列 MD 报告。
+- [X] 更新 `V2/docs/qa_result_schema.md` 为闭环版口径（中文说明）。
+
+## Current task (2026-04-29 · V2 本地 Qwen QA 集成)
+- [X] `V2/src/config.py` 与 `V2/.env.example` 增加本地 Qwen QA 配置（Ollama base_url/model/timeout/enable）。
+- [X] `V2/src/qa.py` 升级为混合 QA：L1 规则 + L2 本地 Qwen 语义评审，输出 `dimension_scores` 与 `qa_mode`。
+- [X] `V2/src/pipeline.py` 改为 `await qa.evaluate(...)`；Qwen 失败时不阻断草稿发布，记录 `qa_failed/qa_error`。
+- [X] `V2/src/storage.py` 扩展 QA 存储字段：`qa_mode`、`qa_failed`、`qa_error`、`qa_dimension_scores`、`qa_suggestions`。
+- [X] 更新 `V2/docs/qa_result_schema.md` 口径，补充本地 Qwen 失败容错语义。
+- [X] 完成 `python -m compileall src` + lints 校验。
+
+## Current task (2026-04-29 · V1 封板冻结)
+- [X] 按用户要求确认：V1 后续不再改逻辑，仅运行与复制。
+- [X] 新增冻结文档 `项目PRD/V1封板逻辑冻结说明_2026-04-29.md`（含流程、去重规则、运行方式、SHA256 基线）。
+
+## Current task (2026-04-29 · 定时改为早10晚10)
+- [X] 将 `V1/.env` 的 `SCHEDULE_MORNING_HOUR` 从 8 改为 10，晚间保持 22。
+
+## Current task (2026-04-29 · 同稿重复入草稿箱)
+- [X] 根因：入口 URL 不同 + 仅用 `source_url` 字符串比对；正文版式差异导致全文相似度不足。
+- [X] `storage.py`：落地页 `url_fingerprint`、可选 `landing_url`、`resolved_url` 落库、正文规范化前缀匹配。
+- [X] `pipeline.py`：抓取返回 `final_url`；本轮 `seen_landing_fingerprints` + `_norm_text` 标题集防同轮重复。
+- [X] 同步 `项目PRD/wechat_auto_pipeline_project` 同改动；compileall 校验。
+- [X] 标题重复即整条跳过：`titles_duplicated`、`title_duplicate_against_history`、抓取前预检 + `exists_duplicate` 内标题优先短路。
+
+## Current task (2026-04-29 · 标题乱码/原文链接/**清理)
+- [X] 修复 `V1/src/pipeline.py` 抓取页编码识别，降低标题与正文乱码概率。
+- [X] 移除 `V1/src/wechat.py` 摘要正文中的“原文链接”展示段。
+- [X] 在 `V1/src/ai.py` 输出阶段统一清洗 `**` 标记，避免摘要残留 markdown 痕迹。
+- [X] 完成编译与 lint 校验。
+
+## Current task (2026-04-29 · V1 政治与长度过滤)
+- [X] 在 `V1/src/pipeline.py` 增加政治敏感内容拦截（命中后不摘要、不上传、不入库）。
+- [X] 在 `V1/src/pipeline.py` 增加正文净字数 `<100` 过滤（命中后不上传、不入库）。
+- [X] 运行编译与 lint 验证，确认无新增错误。
+
+## Current task (2026-04-29 · V1 文章质量问题修复)
+- [X] 梳理 V1 搜索/入稿中标题、snippet、封面提取的归一化入口。
+- [X] 在 `V1/src/search.py` 增加 `normalize_title` + `normalize_snippet` 并接入 Google RSS / DDGS。
+- [X] 在 `V1/src/pipeline.py` 加强封面候选筛选（优先正文首图，过滤 logo/icon/小图）与回退日志。
+- [X] 在 `V1/src/pipeline.py` 入草稿前做标题来源尾缀二次清理。
+- [X] 更新 README 规则并完成一次代码级验证（compile/lint + 样本回放说明）。
+
+## Current task (2026-04-29 · V1 去除附加 QA 验证)
+- [X] 确认 V1 中 QA 节点是否影响主链路发布。
+- [X] 若不影响，移除 `V1/src/qa.py` 及 `pipeline.py` 中 QA 调用。
+- [X] 同步 `V1` 文档口径并做最小运行校验。
+- [X] 清理历史数据 `V1/data/articles.json` 里的 `qa_*` 遗留字段。
+
+## Current task (2026-04-28 · V1最小链路重构)
+- [X] 将当前 `V1` 重命名为 `his` 作为历史版本归档。
+- [X] 从可跑通链路抽取最小代码集合，重建新的 `V1`（仅保留定时/搜索/去重/DeepSeek/草稿箱）。
+- [X] 重写 `V1/README.md`、`V1/PRD.md`、`V1/流程图.md`，口径与当前真实功能一致。
+- [X] 修复新 `V1` 封面图软链接失效问题（改为真实文件）。
+- [X] 在新 `V1` 执行 `run-once` 验证成功，并启动 `run-scheduler` 常驻（08:00/20:00）。
+
+## Current task (2026-04-28 · V1 .env 最小化清理)
+- [X] 删除已停用配置：AI Builder、Gemini、APP_API_KEYS_JSON、SMTP、PUBLIC_BASE_URL、Feishu 相关项。
+- [X] 保留 V1 运行必需配置：DeepSeek、WeChat MP、Data、Schedule 相关字段。
+
+## Current task (2026-04-28 · V2 独立目录与文档基线)
+- [X] 新建 `V2/` 目录并建立独立文档入口，不在 `V1` 继续迭代新功能。
+- [X] 落地 V2 粗框架文档：`V2/README.md`、`V2/PRD.md`、`V2/流程图.md`、`V2/docs/v2_roadmap.md`。
+- [X] 定义首个 P0 文档：`V2/docs/qa_result_schema.md`（摘要后自动审核结果结构）。
+
+## Current task (2026-04-28 · V1 定时调整为 10:00 / 22:00)
+- [X] `V1/.env`、`V1/.env.example`、`V1/src/config.py` 默认与文档改为早 10 晚 22；`V2` 示例与默认同步。
+- [X] 补全缺失的 `V1/src/qa.py`（`pipeline` 已引用但文件曾缺失，重启调度会 import 失败）。
+- [X] 本机已重启 `run-scheduler`，日志确认 `10:00 and 22:00 (Asia/Shanghai)`。
+
+## Current task (2026-04-28 · V2 Task 1 代码骨架 + QA 接口)
+- [X] 初始化 `V2/src` 可运行骨架（main/config/search/ai/wechat/storage/pipeline）。
+- [X] 新增 `V2/src/qa.py`，落地 `QAEvaluation` + `QADecision` + `SummaryQAService`（P0 启发式版本）。
+- [X] 在 `V2/src/pipeline.py` 接入 QA 节点（先记录与落库，不改变发布行为）。
+- [X] 补齐 `V2/.env.example`、`V2/requirements.txt`、`V2/docs/summary_prompt.md`、`V2/.gitignore`。
+- [X] 完成 V2 代码语法校验（`python -m compileall src`）。
+
+## Current task (2026-04-27 · fallback原文直推与封面策略)
+- [X] DeepSeek 失败时改为直接推送原文正文，并返回 fallback 标记给调用方。
+- [X] fallback 场景自动给标题加 `【原文非摘要】` 前缀。
+- [X] 标题清洗：去掉尾部站点来源后缀（如 `- 人民网` / `| 新华网` / `.com`）。
+- [X] prompt 加强：重点加粗必须是完整陈述句，禁止只加粗单字/单词。
+- [X] 封面策略改为：优先原文第一张图；无原图时优先本地封面图，再回退 media_id。
+
+## Current task (2026-04-22 · 新建可开源独立项目目录)
+- [X] 盘点现有全链路代码：调度、搜索、去重入库、摘要、公众号草稿箱。
+- [X] 新建独立项目文件夹（可单独上传 GitHub）并实现可运行链路。
+- [X] 输出中文 README（含本地部署与公众号打通步骤）。
+- [X] 输出中文产品流程图（Mermaid）与 PRD（按规范化结构完善）。
+
+## Current task (2026-04-22 · 流程图与代码一一对应修正)
+- [X] 对照 `wechat_auto_pipeline_project/src/pipeline.py` 逐步核对执行顺序。
+- [X] 参考根目录 `流程图.md` 表达方式，重写为单一流程图。
+- [X] 移除误导分支（如“摘要成功后不进草稿箱”）并修正节点流转。
+
+## Current task (2026-04-22 · 文档与代码全量口径统一)
+- [X] 审计 `README.md` / `docs/PRD.md` / `docs/流程图.md` 与 `src/*.py` 的执行顺序一致性。
+- [X] 修正文档口径：实际顺序为「去重 -> 摘要 -> 草稿箱 -> 入库 published」。
+- [X] 修正文档口径：当前代码对微信失败仅计入 failed，不自动重试。
+
+## Current task (2026-04-22 · 搜索超时重试与三工具链)
+- [X] 在 `search.py` 增加三工具搜索链路：Google RSS -> Bing RSS -> DDGS。
+- [X] 每个工具加入最多 3 次重试与退避等待。
+- [X] 三工具均失败/无结果时抛错暂停本次任务。
+- [X] 代码与 README/PRD/流程图/一致性清单口径同步。
+
+## Current task (2026-04-22 · 公众号 \\uXXXX 乱码)
+- [X] 根因：模型偶发把正文以 JSON 字面量形式输出（`\\u9ad8...`），未解码即入库/进草稿。
+- [X] 修复：`utils/text_encoding.decode_json_unicode_escapes`；接入 `generate_wechat_article`、`summarize` 返回值、`build_wechat_publish_draft`、`summary_to_wechat_html` / digest、`choose_article_title`。
+
+## Current task (2026-04-22 · 全链路复跑)
+- [X] 修复 `AiService.web_search` 调用 `search_cn_news(..., timeout=)` 导致 `TypeError`，扇出直接失败、回落单 RSS 也易失败。
+- [X] 本机沙箱对 `news.google.com` / `lh3.googleusercontent.com` 连接超时，`web_search_auto_ingest` 无法新入库；用存量稿 `e142bae3-...` 跑通 `generate_summary` → `PATCH ready_for_review` → `review approve` → `publish`，日志 `WeChat draft created` + `media_id` 成功。
+
+## Current task (2026-05-14 · 事件扩搜检索词 / RSS 正文 / 相似度)
+- [X] 检索词：`expansion.yaml` **`gdelt_event_title_max_chars: 15`**（事件名截断 + 主锚如「低空经济」）；`config_expansion.py` 缺省同步为 15 / **`similarity_threshold` 缺省 0.7**。
+- [X] Google News RSS：**``googlenewsdecoder``** 将 ``news.google.com/rss/articles/...`` 解为发布站 URL（RSS 解析 + ``fetch_html_text_with_effective_url`` 入口）；失败再回落 HTML 外链解析；JSON 入库 **`resolved_url=store_url`**，`existing_urls` 双登记。
+- [X] **`similarity_threshold: 0.70`**（`expansion.yaml`）。
+
+## Current task (2026-04-22 · 备用新闻检索)
+- [X] 新增 `services/news_rss_fallback.py`：仅 **DDGS**；`NEWS_SEARCH_FALLBACK`；`web_search` 在 Google 时间窗合并为空时合并备用结果；`_public_web_search` 在 Google 失败或为空时回落 DDGS。
+- [X] `MvpStatusResponse` / `build_mvp_status` 暴露 `news_search_fallback`（已移除 SearXNG 相关字段）。
+
+## Current task (2026-04-22 · wechat_auto_pipeline_project 文档同步)
+- [X] 将最新代码改动同步到 `docs/PRD.md`：站点优先+全域补充、百科过滤、摘要规范文档、引用说明。
+- [X] 更新 `docs/流程图.md`：补充站点优先检索、百科过滤、摘要规范加载、草稿引用说明节点与映射。
+- [X] 更新 `docs/一致性清单.md`：新增上述能力与代码实现的一致性核对项。
+
+## Current task (2026-04-22 · 开源检索方案连通性验证)
+- [X] `ddgs`（PyPI `ddgs` 9.8.0）可联网检索，能检索出 `SearXNG`、`open-websearch` 相关结果；在 Python 3.9 偶发 TLSv1.3 不兼容报错，可用 `DDGS(verify=False)` 暂时绕过。
+- [X] `@iflow-mcp/open-websearch`（npm 1.2.0）可启动 HTTP MCP 服务（3010）；验证到 `/sse` 返回会话端点，属于 MCP 协议交互，不是 REST `/search` 直调。
+- [X] `websearch4ai`（0.0.1）当前 `search(query)` 为占位实现，不适合生产检索；`spower`（0.2.1）导入即缺 `googlesearcher` 依赖；`tourist` PyPI 包与 “SerpAPI 替代” 并非同一项目。
+
+## Current task (2026-04-22 · DDGS 接入 AiService fallback)
+- [X] `services/news_rss_fallback.py`：`fetch_ddgs_dicts` + `run_news_search_fallback`（DDGS-only；`searxng` 旧值打日志后走 DDGS）。
+- [X] `services/ai_service.py`：`_public_web_search` 与 `web_search` 在 Google 无可用结果时回落 DDGS。
+
+## Current task (2026-04-20 · 自动化发布 + 成本测算)
+- [X] 打通定时任务全链路：搜索 → 摘要 → 自动发布到公众号草稿箱（无需人工审核/发布）
+- [X] 发布策略固定为每次最多 20 篇，少于 20 篇则全发
+- [X] 调整定时参数为每天 08:00 与 20:00，检索历史窗口 14 小时
+- [X] 本地验证一次定时同款流程成功（可用手动触发接口）
+- [X] 输出成本测算：开发 token、人工时间、维护时间、月度 DeepSeek token 成本
+
+## Current task (2026-04-20)
+- [X] 搜索扇出：`services/cn_news_search.py` 覆盖政务（gov.cn/发改委/工信部/民航局/交通部/科技部/商务部）+ 权威央媒（新华/人民/央视/中新）+ 市场媒体（新浪财经/澎湃/第一财经/财新/财联社/36氪/证券时报/界面）+ 科技媒体（IT之家/钛媒体/雷锋/爱范儿/InfoQ/Solidot）。
+- [X] AI 服务重接：直连 DeepSeek 官方 API（`DEEPSEEK_API_KEY` + `deepseek-chat`）为首选；摘要 prompt 支持 `**粗体**` 高亮；`web_search` 包装 `search_cn_news`。
+- [X] 封面：`ArticleService._extract_image_urls` 抽 `og:image`/`twitter:image`/`link rel=image_src`；`upload_cover_from_url`（含尺寸过滤）+ `resolve_thumb_media_id_for_article`（per-article 上传 → `WECHAT_MP_THUMB_LOCAL_PATH` 回落）。
+- [X] 公众号草稿：`summary_to_wechat_html` 将 `**x**` → `<strong style="color:#c0392b">…</strong>`，裸 URL 自动链接；`build_wechat_publish_draft` 文末追加 原文标题 + 原文链接。
+- [X] Google News redirect URL 解码：集成 `googlenewsdecoder`（pypi 0.1.7）在 `cn_news_search` 合并排序后批量还原真实发布站 URL；失败静默回落原 URL。
+- [X] `.env` 401 阻塞：AI Builder 链路保留为次选，`DEEPSEEK_API_KEY` 命中时直连 DeepSeek，不再依赖 `AI_BUILDER_TOKEN`。
+- [X] 端到端回路验证（2026-04-20 22:40 CST）：`POST /v1/web_search_auto_ingest` → DeepSeek 重生成摘要 → `PATCH status=ready_for_review` → `POST /review?decision=approve` → `POST /publish` 成功写入公众号草稿箱 3 篇（低空经济 · 大湾区 / 注册无人机 328.7 万架 / 欣旺达广州低空公司），每篇 `draft/add` 200 OK 并返回真实 `media_id`。
+- [X] 新标准检索落地（2026-04-20 22:55 CST）：`services/web_search_ingest.py` 增加低空强相关过滤（仅保留 低空/无人机/eVTOL 等关键词，剔除美伊/黄金/原油等噪声主题）+ `article_ranking.rank_and_trim` 优先级排序（国内政策 > 地方政策 > 中外竞合 > 前沿技术）+ 全流程返回上限 `STRICT_PUSH_LIMIT=20`。`/v1/web_search` 与 `/v1/web_search_auto_ingest` 均使用同一规则。
+- [X] 入库去重增强（2026-04-20 23:17 CST）：`storage/json_store.py` 改为 URL 精确 + 标题相似度 + 内容相似度三层去重；标题相似度阈值 `>=90%`（`TITLE_SIMILARITY_THRESHOLD=0.90`），内容相似度阈值 `>=90%`。`/v1/articles/dedupe` 已按新规则清理历史重复（本次 removed=3）。
+- [X] 数据源清单自动补齐（2026-04-20 23:17 CST）：启动时将 `services/cn_news_search.py::DEFAULT_SITES` 自动同步到 `data_sources.json`；并规范域名（去协议/路径、合并 `www.`）避免重复源。当前 `v1/data_sources` 共 28 条，含 `caac.gov.cn`。
+- [X] 历史巡检与保留期（2026-04-20 23:24 CST）：新增每日维护任务 `maintenance_daily_cleanup`（默认 03:30，`SCHEDULE_TIMEZONE` 时区）自动执行去重 + 历史清理；仅保留最近 `DATA_RETENTION_DAYS=60` 天文章。已手动执行一次，当前 `removed_dup=0 / removed_old=0`。
+- [X] 关键词外置合并（2026-04-20 23:30 CST）：将主业务 `CATEGORY_QUERIES` 与 portable `web_search.queries` 合并为 workspace 配置 `config/search_keywords.json`，`services/scheduled_push.py` 改为从该文件读取并在异常时回退默认；已删除 `low_altitude_pipeline_portable/` 目录。
+- [X] 单篇全流程复测（2026-04-20 23:52 CST）：草稿 `fdd1fae4-f1af-4820-acb1-13c206874f36`（人民网 · 大湾区低空）`POST …/generate_summary` → `PATCH ready_for_review` → `POST …/review?decision=approve` → `POST …/publish` 成功，`status=published`、`published_at` 已写入；`POST /publish` 响应体未带 `media_id`，以服务端日志 `WeChat draft created` 为准。
+
+## Lessons
+- **阶段五 QA + 条件重写（2026-05-16）**：实现于 `V3/src/services/qa_rewrite/`；prompt 在包内 `prompts/*.txt`；编排入口 `run_press_quality_pipeline`；配置前缀 `QA_REWRITE_*`；集成自测 `tests/integration/run_qa_rewrite_mvp.py`。
+- **Google News RSS 与 trafilatura（2026-05-14）**：RSS 里常见 **`news.google.com/.../articles/...`** 占位 URL；仅用 HTML 正则常抽不到外链。管线顺序：**``googlenewsdecoder``（与 V1 一致）在 RSS 解析与 ``fetch_html_text_with_effective_url`` 入口将 URL 解成发布站**，再 GET + trafilatura；解码失败时仍回落 HTML 外链解析。依赖 **`googlenewsdecoder`**（见 ``event_enhancement/requirements.txt``）。
+- **GDELT 与系统 HTTP 代理（2026-05-14）**：`httpx` 默认 `trust_env=True` 会走 `HTTP(S)_PROXY`；部分代理对 `api.gdeltproject.org` 的 CONNECT/TLS 不稳定，出现 **SSLZeroReturnError**。应对：对 **仅 GDELT** 使用独立 **`AsyncClient(..., trust_env=False)`**，正文抓取仍用 **`trust_env=True`**（HuggingFace 等可走代理）。实现于 `event_enhancement/pipeline/expansion.py` 与 `V3/src/event_enhancement_json.py`。
+- **事件扩搜入库顺序（2026-05-16）**：同一检索源（GDELT / Google RSS / DDGS）内，先对全部命中做抓取与嵌入，筛 **``sim > similarity_threshold``** 后按 **相似度升序** 写入（优先与事件 bank 相对更远、仍达标的稿），再刷新 bank；PG 与 JSON 两路一致（``expansion.py`` / ``event_enhancement_json.py``）。
+- **事件扩搜 cascade（2026-05-15）**：检索词为 **``{去书名号截断事件名} {主锚}``** 纯文本；默认 **GDELT（``… sourcelang:chinese``）→ Google News RSS → DDGS**，每源 **``search_attempts_per_source``** 轮空结果重试；**任源入库 ≥1 则不再试后续源**。配置 ``expansion_search_cascade`` / ``search_attempts_per_source``；实现 ``expansion_cascade.fetch_expansion_source_hits``、``search/google_news_rss.py``。
+- **事件通稿阶段四（2026-05-15）**：实现于 `V3/src/services/ai_press_writer/`；`run_once` 在必选阶段三之后调用 `_run_optional_event_press_post_pipeline`（`EVENT_AI_PRESS_ENABLED=true` 且需 `DEEPSEEK_API_KEY`）。独立补跑：`cd V3 && PYTHONPATH=. python -m src.main generate-event-press`（CLI 使用 `force=True`，仍受 `EVENT_AI_PRESS_SKIP_IF_EXISTS` 与 `EVENT_AI_PRESS_MIN_ARTICLES` 约束）。通稿落 `events.json` 的 `event_press_zh` / `event_press_generated_at`。
+- **V3 新闻 prompt 外置（2026-05-15）**：可迭代体例在 `V3/docs/prompts/*.md`；`load_prompt_file(stem)` 见 `src/utils/prompt_load.py`；单篇/簇/QA 见 `ai.py`，事件通稿见 `prompt_builder.py`；`docs/summary_prompt.md` 仅跳转；项目技能 `.cursor/skills/zh-news-from-prompts/SKILL.md`。
+- **事件通稿 DeepSeek 批量（2026-05-15）**：`EventPressWriterService` 在 `__init__` 缓存 `event_press_system` 与 user 模板；`run_event_press_generation` 单实例 `for ev in events` 只拼装 per-event user，与「system 固定、user 变」一致；计费是否减免以 DeepSeek 是否支持前缀缓存为准。
+- **summary_prompt.md 与通稿 prompt（2026-05-15）**：~~旧~~ 单篇体例已迁至 `V3/docs/prompts/news_single_summary.md`；事件通稿为 `event_press_system.md` + `event_press_user.md`。
+- **V3 无 .env 时 fixture 通稿脚本（2026-05-16）**：`tests/integration/run_event_press_fixture.py` 在 `Settings()` 前调用 `_apply_env_files()`：先试 `V3/.env`，再试仓库 `V1/.env`，且不覆盖已 export 的变量；`python -m src.main` 仍只读 `V3/.env`（或进程环境），生产请在 `V3/.env` 写入 `DEEPSEEK_API_KEY`。
+- **事件通稿选文器（2026-05-16）**：选的是**事件内**进 prompt 的篇目与顺序，不是选事件。默认 `EVENT_AI_PRESS_SELECTION_MODE=all_by_tier`（与全文素材一致）；`top_k_dedupe` 为可选收紧。
+- **事件通稿默认不截断正文（2026-05-16）**：`EVENT_AI_PRESS_PER_ARTICLE_MAX_CHARS=0`、`EVENT_AI_PRESS_MAX_USER_CHARS=0`、`EVENT_AI_PRESS_SOFT_TOKEN_BUDGET=0` 为默认；长 payload 时 `EVENT_AI_PRESS_TIMEOUT_SEC` 默认 180。若 API 报上下文过长再设正数字 cap 或缩小 `MAX_ARTICLES_IN_PROMPT`。
+- **GDELT 扩搜 query 过长与 429（2026-05-14）**：旧逻辑用「整段事件标题 + 多篇成员标题」拼 blurb 再抽词，OR 核可达数十词；GDELT 对超长 `query` 易 **429**。现默认 **`gdelt_event_title_max_chars: 15`**、**`gdelt_query_include_member_titles: false`**、**`gdelt_query_max_or_terms: 4`**（`expansion.yaml`），`build_gdelt_query_strings` 以**截断后事件名 + 锚词**为主；PG/JSON 两路均传参。
+- **event_enhancement 包 import 路径（2026-05-14）**：可导入包在仓库 ``event_enhancement/event_enhancement/`` 下，``sys.path`` 须包含 **外层** ``…/event_enhancement`` 目录，不能只插仓库根；``V3/src/event_enhancement_workflow._ensure_package_path`` 已改为 ``_repo_root() / \"event_enhancement\"``。
+- **每事件最多 N 篇扩搜关联（2026-05-14）**：`expansion.yaml` 的 `max_articles_per_event`（默认 5）；PG 在 `EventArticleMap` 达上限后不再插入新扩搜稿；`merge_postgres_articles_into_json` 在 JSON 该 `event_id` 已达上限时不再追加，**不 delete** 既有 JSON/`Article` 行。若历史 JSON 已超过 N 条，需人工或其它流程收束后才能再扩搜入库。
+- **历史聚类测阶段三（2026-05-14）**：`tests/integration/run_event_enhancement_fixture.py` 默认 `tests/data/dedupe_runs/beijing`；因 ingest 可能只写代表稿一条，脚本会 **hydrate** `event_article_map` 中缺行的 URL 到 `articles.json`，并 **touch** `created_at` 以落入 `expansion_ranking_window_hours`。需完整 `requirements` + `EVENT_ENHANCEMENT_DATABASE_URL` + Alembic。
+- **run_once 提前 return 也必须跑阶段三（2026-05-14）**：`all_hits` 为空、`publish_to_wechat` 且 `_remaining_daily_publish_slots()<=0` 等分支原先 `return` 在 `run_event_enhancement_post_pipeline` 之前，会跳过 JSON→PG 同步与扩搜。已统一为 **`_run_mandatory_event_enhancement_post_pipeline()`** 在所有出口前调用（与模块必选语义一致）。
+- **`_parse_published_raw_to_utc` 的 `re.sub`（2026-05-14）**：去掉 `published:` 等前缀必须是 `re.sub(pattern, "", s, flags=re.I)`，不可把 `s` 当作 replacement 传在第二位，否则 `TypeError`。
+- **事件增强 event_enhancement（2026-05-14）**：[`event_enhancement/`](event_enhancement/) 为阶段三实现；**`run_once` 必选**（`V3/src/pipeline.py` 末尾调用 `event_enhancement_workflow`）。须配置 **`EVENT_ENHANCEMENT_DATABASE_URL`** + Alembic（含 `002_align_v3_fields`）；表与 JSON 映射见 [`V3/docs/数据库结构_事件增强.md`](V3/docs/数据库结构_事件增强.md)。CLI 调试：`event_enhancement` 目录 `export PYTHONPATH=$PWD`。Alembic 用同步 `postgresql://...`（去掉 `+asyncpg`）。
+- **V3 去重流程图（2026-05-14）**：完整 Mermaid（逐条入批前 + 向量/冷启动 + 簇后成稿）见 `V3/docs/入库与事件聚类流程.md`「去重与聚类完整流程图」。
+- **V3 集成脚本仅放 tests/integration（2026-05-14）**：`run_search_flow` / `run_saved_search_dedupe_report` / `run_fetch_embed_dedupe` / `run_embedding_urls_ingest` / `verify_search_dedupe_chain` 均在 `tests/integration/`；`V3/` 根目录不再保留 `test_*.py` 转发，避免与生产入口混淆；说明见 `tests/README.md`。
+- **HTML 解码乱码（2026-05-14）**：旧 `_decode_html` 用候选编码打分，且 CJK 统计正则写错（无法匹配汉字），易让 **Latin-1 误解 UTF-8**（如 RFI 中文）胜出。已改为 `src/utils/http_decode.decode_http_html_bytes`：**优先 utf-8-sig / utf-8 严格解码**；失败再按 meta、Content-Type、中文编码候选 + 质量分；依赖 `charset-normalizer` 作兜底嗅探。栏目页 `html_list_monitor` 同步复用。
+- **同题多源向量聚类测试（2026-05-14）**：`tests/integration/run_embedding_urls_ingest.py` + `tests/data/fixtures/beijing_drone_dedupe_test_input.json` → 结果在 `tests/data/dedupe_runs/beijing/`。与生产 `run_once` 的区别：摘要为占位、**未**走 DeepSeek 簇摘要与 QA；向量转载/事件边逻辑与 `ingest_cluster` 一致。
+- **V3 去重报告可读输出（2026-05-14）**：跑 `tests/integration/run_saved_search_dedupe_report.py` 后除 JSON 外会生成 **`tests/data/search/dedupe_report_from_saved_search_阅读摘要.md`**（与 `--output` 同主文件名）；核对「转载去掉谁、事件簇里有哪些 URL」以该文件为准；默认也会在终端打印同内容。
+- **V3 本地向量 bge-m3（2026-05-13）**：`EMBEDDING_BACKEND=local` 时用 `sentence-transformers` 加载 `BAAI/bge-m3`，**无需 EMBEDDING_API_KEY**；首次需联网拉权重，依赖见 `V3/requirements.txt`。远程 OpenAI 兼容接口设 `EMBEDDING_BACKEND=http` 并配 KEY。
+- **transformers 与 torch 版本（2026-05-14）**：`transformers` 4.57+ 在部分环境会强制要求 `torch>=2.6`（CVE 相关检查）；若 pip 无 torch 2.6 wheel，可 **`pip install 'transformers>=4.36,<4.46'`**（已写入 `V3/requirements.txt` 与 bge 栈搭配）。
+- **V3 trafilatura + lxml 6（2026-05-13）**：安装 `trafilatura` 后若 `ImportError: lxml.html.clean`，需同时安装 **`lxml_html_clean`**（已写入 `V3/requirements.txt`）。
+- **V3 filter_by_age（2026-05-13）**：`published_at` 为空、不可解析、或超出 `MAX_ARTICLE_AGE_HOURS` 的检索条一律不进候选；`max_hours<=0` 时不做小时比较但仍须可解析时间。`tests/integration/run_fetch_embed_dedupe.py` 与 `run_once` 共用 `filter_by_age(..., MAX_ARTICLE_AGE_HOURS)`；向量步需 `EMBEDDING_ENABLED=true`，本机 `EMBEDDING_BACKEND=local` 免 KEY，远程 `http` 需 `EMBEDDING_API_KEY`。
+- **V3 栏目页列表 `published_at`（2026-05-13）**：每条链必经父级列表块解析——`views-row` 的 `<time>`、向上容器内 `time` 与稿件链接条数对齐、`meta`（article:published_time/datePublished/pubdate）、容器文本（`YYYY-MM-DD`/中文年月日/英文月名），再 URL `tYYYYMMDD_`；单容器内链接数 >10 时不做全文日期盲扫以防侧栏误伤。RSS 仍走 `rss_aggregate` 的 item pubDate/DC。详情页 `div.mb-4` 等仍由 pipeline 补强。
+- **V3 发布时间分层（2026-05-13）**：勿只依赖 RSS `pubDate`（36kr 非 RFC822）或整页正则；落地页顺序为 meta/time → 多段 ld+json（扩展键名）→ `__NEXT_DATA__`/script 内 `"published_at"` → `data_sources.json` 的 `published_at_css`（按 `value` 域名）→ 主内容区再全文。仅日历日精度用 `DATE_ONLY_MAX_CALENDAR_AGE_DAYS` + `source_published_at_date_only` 与 QA `SummaryService._source_published_in_window` 对齐。
+- **V3 外文站 `published_at`（2026-05-13）**：FAA 等 Drupal 页把日期放在标题下 `div.node__content > div.mb-4` 纯文本（如 `Wednesday, May 6, 2026`）。仅匹配 `20xx-xx-xx` 会永远失败；需在 `_to_utc_iso_datetime` 用英文 `strptime`，并在 `_extract_published_at` 采集该结构与全文英文日期正则。
+- **data_sources：html_list 源不写 rss/rss_available（2026-05-13）**：仅 `ingest_mode`+`list_monitor_url`；RSS 源保留 `rss`+`rss_available:true`。若某站 RSS 在你环境可用，改回 RSS 需去掉 `html_list` 并显式 `rss_available:true`。
+- **V3 RSS 健康度（2026-05-13）**：对 18 个原 RSS feed 实测多站 404/403；5 条仍走 RSS；其余改 `html_list`。探针样例见 `V3/data/rss_feed_probe.json`。
+- **GDELT DOC（2026-05-13）**：简单 `query=drone` 可稳定返回 JSON；长 OR 查询或并发下本机曾出现空体 `JSONDecodeError`、`SSLZeroReturnError`，更像链路与查询复杂度/限流问题，需在 `gdelt_doc_search_with_client` 对非 JSON 响应打日志并可选降批/降并发。
+- **系统 PATH 的 python3 可能是 3.6（2026-05-13）**：跑 JSON 脚本/compileall 时用 `miniconda3/bin/python3`，避免 3.6 与项目依赖不兼容或异常退出。
+- **V3 `tests/integration/run_search_flow.py` 全量站点×多词 GDELT（2026-05-13）**：`english_keywords`+`chinese_keywords` 会并入站点阶段查询，×18 域名扇出极易触发 GDELT `429`、耗时可超 10 分钟；联调可用少量词 + `SEARCH_LOAD_HIS_DATA_SOURCES=false`（无站点则走全域 fallback）或缩小 `SEARCH_TARGET_SITES`。
+- **`search_keywords.json` 不能写注释（2026-05-01）**：JSON 中 `/* ... */` 会触发 `JSONDecodeError`，系统会退回 `SEARCH_QUERIES` 单条检索，导致“看起来能跑但策略失效”；需要保持严格合法 JSON。
+- **发布限额要拆成两维（2026-05-01）**：业务口径常见“单次上限”和“每日上限”同时存在，建议新增 `MAX_PUBLISH_PER_DAY`，不要复用 `MAX_PUBLISH_PER_RUN` 以免语义冲突。
+- **`MAX_PUBLISH_PER_RUN` 默认语义是“单次上限”（2026-05-01）**：如果一天跑两次，日总量会翻倍；要满足“每天最多 N 篇”，必须按本地自然日统计已推送数量并扣减剩余配额。
+- **正式发布参数需和调度重启绑定（2026-05-01）**：`.env` 修改（如发布开关、上限、时窗）不会自动作用于已运行 scheduler；必须重启 `run-scheduler` 并看启动日志确认已加载新值。
+- **run-once 发布后也要打“已推草稿”标记（2026-05-01）**：若仅 `push-today-drafts` 写 `wechat_draft_pushed_at`，则 `run-once` 已发布记录在补推时会被再次命中，导致草稿箱重复；应在 `run-once` 发布成功后同步写入该字段。
+- **DeepSeek复核也要有“拼盘快讯”硬失败（2026-05-01）**：不能只依赖前置规则；在 QA 的 deterministic guard 中加入 `roundup_or_fastnews_not_domain_primary`，即使模型主观打分偏高也一票否决。
+- **草稿箱回滚要同步做（2026-05-01）**：本地规则修复后，历史误推稿不会自动消失；需额外调用 `draft/batchget + draft/delete` 清理公众号端存量，避免“看起来仍在推错稿”的错觉。
+- **标题词典需覆盖近义表述（2026-05-01）**：仅拦截“这些新规将施行”不够，需同时覆盖“这些新规将影响你我生活”等变体，否则快讯合集会漏网。
+- **补推命令也必须走 QA（2026-05-01）**：仅在 `run-once` 做 QA 不够，`push-today-drafts` 也要复用同一套“规则门禁 + DeepSeek 复核”，否则会绕过抽检策略。
+- **发布链路建议 fail-closed（2026-05-01）**：DeepSeek QA 无响应/输出异常时应直接拦截发布（而不是放行），可避免“不确定质量”稿件进入公众号草稿箱。
+- **“新规合集/快讯”需先于语义审核拦截（2026-05-01）**：即使 DeepSeek 可能给出“可发布”，但只要是多领域汇总或快讯体裁（如“新规来了”“这些新规将施行”），就应在规则门禁层直接剔除，不能进入发布候选。
+- **发布与抽检应显式解耦（2026-05-01）**：生产默认可设 `RUN_ONCE_PUSH_TO_WECHAT=false`，让 `run-once` 只产出待抽检稿；人工确认后再执行 `push-today-drafts`，可显著降低“混入不相关稿件直接入草稿箱”的风险。
+- **扩窗回归可用于“拿人工样本”（2026-05-01）**：当 14h 窗口下稳定 `published=0` 时，可临时将 `MAX_ARTICLE_AGE_HOURS` 放宽到 48h 获取抽检样本，验证链路与摘要质量后再恢复生产窗口。
+- **严格摘要必须禁 fallback 发布（2026-05-01）**：`SummaryService` 在 DeepSeek失败/不合格时会回退 `【摘要】` 模板文；若不在发布前拦截，会把明显不符合 `summary_prompt` 的稿件推入草稿箱。生产口径应“fallback 直接跳过，不发布”。
+- **同领域判定需“主焦点”而非“关键词命中”（2026-05-01）**：多领域“新规合集”常包含一段无人机信息，单纯低空关键词命中会误入。应增加 primary-focus 门禁（跨领域词过多且低空密度不足则剔除）。
+- **无稿不发应是默认行为（2026-05-01）**：当时间窗和主题门禁同时收紧后，`published=0` 是正常业务结果，`run_once` 不应抛错中断；应记录统计并平稳返回。
+- **草稿箱补推也必须走时间窗（2026-05-01）**：`push-today-drafts` 不能只按 `created_at`，还必须校验 `source_published_at` 在窗口内，否则会把历史旧稿再次推入草稿箱。
+- **校验标准需文档化（2026-05-01）**：将“时间硬门禁 + 范围白名单 + 排除项 + 无稿策略”固化到单独 MD，可显著减少后续口径漂移和反复沟通成本。
+- **发布时间防污染（2026-05-01）**：`source_published_at` 不能回退搜索结果时间，否则会把 2025 旧文伪装成新文；生产口径应改为“页面发布时间必需，提取失败即丢弃”。
+- **低空主题门禁需双层（2026-05-01）**：仅做关键词命中（如“无人机”）会放入企业官网、百科、娱乐和应用商店页；应叠加 scope-excluded 规则（host + 标题/正文壳层词）并在发布前再复核一次。
+- **交付前验证策略（2026-05-01）**：全量 `site_core_keywords × target_sites` 在当前网络下耗时较长，交付前应做一次“单关键词 smoke run-once”确认链路可执行，再让定时任务按正式配置在窗口内运行。
+- **V1 运行配置自包含（2026-05-01）**：若 `V1` 已独立运行，站点清单默认路径应放在 `V1/config/data_sources.json`，不要默认跨目录依赖 `../his`，避免版本漂移和误读。
+- **回归测速时需关闭历史站点并入（2026-05-01）**：若 `SEARCH_TARGET_SITES` 想跑小集合，必须同时设 `SEARCH_LOAD_HIS_DATA_SOURCES=false`，否则会被 `his/data_sources` 自动扩回 28 站点。
+- **phase1 无结果时 phase2 已稳定命中（2026-05-01）**：当前网络环境下 `site:domain` 常超时/空结果，但全网 `google_news_rss` 对 `local_policy` 关键词可稳定返回结果；后续瓶颈主要在发布时间和主题门禁。
+- **用户指定检索策略优先（2026-05-01）**：当用户明确要求 phase1 使用 `site_core_keywords` 全量词时，不能擅自收缩为单关键词；优化应在不改变策略语义的前提下进行。
+- **发布时间硬门禁（2026-05-01）**：DDGS 常缺 `date`；需在抓取落地页后二次提取发布时间（meta/time/json-ld），提取失败或超出 `MAX_ARTICLE_AGE_HOURS` 一律跳过，不入库。
+- **DDGS 发布时间口径（2026-04-30）**：`ddgs.text` 结果若无 `date`，不能用当前时间占位写入 `source_published_at`；应保留为空并让时窗过滤自然淘汰，避免把存量页面误判为“今天发布”。
+- **英文关键词相关性误判（2026-04-30）**：主题相关性匹配中，英文词（如 `uam`）必须按单词边界匹配；不能用简单子串包含，否则 `HUAMING` 这类词会被误判为低空主题。
+- **专业站点与全域词库应分层（2026-04-30）**：专业站点适合用少量核心泛词（无人机/eVTOL/UAM/AAM/低空经济）提高召回，全域检索再用分类长词控主题；执行上应采用“两阶段”：先站点核心词，站点全空再跑全域词库，避免双重约束导致空结果。
+- **定时任务稳定启动（2026-04-30）**：仅在交互终端里跑 `run-scheduler` 容易出现“进程存活但触发异常”；生产侧建议 `nohup ... > data/scheduler.log 2>&1` 常驻并保留启动日志，便于确认 cron 已注册。
+- **站点优先检索口径（2026-04-30）**：当业务要求“专业站点优先”时，检索策略应是“target sites 有结果则直接返回；仅 target sites 全空再跑全网”，避免全网结果稀释专业来源。
+- **V1 检索词应文件化（2026-04-30）**：与 `his` 对齐时，四类定向词应落在 `V1/config/search_keywords.json`，由 `SEARCH_KEYWORDS_PATH` 指向；`SEARCH_QUERIES` 仅作回退，避免线上只剩「无人机、低空」泛搜。
+- **快餐合集稿（2026-04-30）**：「科技早报」「早报 - …；…」等多条拼盘标题应 `skipped_digest` 直接丢弃，避免与同日政策长文重复占用草稿与摘要配额。
+- **标题前缀型通稿去重（2026-04-30）**：规范化后短标题为长标题前缀、仅多十余字时，原 `titles_duplicated` 的「子串 extra 上限」易漏判；应显式分支 `longer.startswith(shorter)` 并放宽 allowed，并在一轮内用 `titles_duplicated` 比对 `processed_title_norms`，不能只靠 `in` 精确集合。
+- **RFI 等站乱码稿（2026-04-30）**：`rfi.fr` 中文页易被误判码，标题成乱码、摘要易偏题；应在 RSS 层 `SEARCH_SOURCE_BLOCKLIST` 拦截，并在 `pipeline` 落地 URL 再拦一层，辅以「正文头含 RFI+破碎西文菜单且标题无正常拉丁词」等启发式跳过。
+- **V1 搜完未入库则无法“只发今天”（2026-04-30）**：`run-once` 在 token 或封面阶段失败时，不会写入 `articles.json`；要“不重新搜索、只写草稿箱”，只能依赖已成功入库的 `created_at` 记录，或另做搜索结果落盘（当前未做）。
+- **微信 IP 白名单 40164（2026-04-30）**：开启 IP 白名单后，本机或云主机出口 IP 必须加入公众号后台白名单，否则 `client_credential` 取 token 即失败；出口 IP 变化时需同步更新或使用固定出口。
+- **httpx 与微信 secret（2026-04-30）**：默认 `httpx` INFO 会打印完整请求 URL，易把 `secret` 写入日志；启动时把 `logging.getLogger("httpx")` 提到 WARNING 以上；若日志曾落盘，应视为泄露风险并轮换 AppSecret。
+- **V2 MVP 先单租户（2026-04-30）**：在审核闭环初期，优先交付“可操作审核面板”（队列+详情+通过/重写）比先上多租户权限更高价值；权限体系延后到产品验证后再做。
+- **生成/审核标准对齐（2026-04-30）**：多Agent闭环要先共享同一写作规则；审核 prompt 必须注入生成 prompt 的核心约束，否则会出现“首检与复检口径漂移”导致的无效降分。
+- **建议可执行性（2026-04-30）**：`reasons/suggestions` 过于笼统时，重写模型无法稳定吸收；应输出结构化 issues（问题片段+原文证据+改写动作+可选示例）再驱动重写。
+- **生产日志与报告边界（2026-04-29）**：人工审核队列 MD 属于调试产物，不应在生产默认每批落盘；推荐“结构化状态 + 日志”为主，MD 通过开关按需开启（联调/灰度/故障排查）。
+- **V2 QA 闭环的发布门禁（2026-04-29）**：若要形成真正多Agent质量控制，必须把 QA 从“记录层”升级到“决策层”：首检未通过触发单轮重写+复检，并以 `final_decision` 作为唯一发布门禁；仅 `auto_pass` 自动发布，其余进入人工队列。
+- **V2 本地模型 QA 容错（2026-04-29）**：接入本地 Ollama/Qwen 做语义 QA 时，必须将“模型失败”视为常态分支而非异常终止；推荐策略是记录 `qa_mode=qwen_failed_fallback` + `qa_failed=true` + `qa_error`，同时不阻断主发布链路，避免因本机模型抖动影响业务连续性。
+- **同稿多入口去重（2026-04-29）**：RSS/跳转链与真实落地页 URL 可能不同；仅用 `source_url` 去重会漏。应对：抓取后用 `resp.url` 做 `host+path` 指纹（忽略 query）、入库 `resolved_url`；单次 run 内对已见落地指纹与 `_norm_text(title)` 再拦一层。
+- **标题即整篇重复（2026-04-29）**：产品口径为「标题与历史或本轮已发候选重复则不再处理该条」。实现：`JsonStore.titles_duplicated` + `title_duplicate_against_history`；`exists_duplicate` 内标题命中即 `True`；`pipeline` 在 `_fetch_text` 前用 `normalize_title(hit.title)` 与库、与 `seen_search_title_norms` 预检。
+- **标题子串型重复（2026-04-29）**：如「兰州新区：无人机…」与「无人机…」`SequenceMatcher`≈0.85，低于 0.9，仅靠 ratio 会漏；`titles_duplicated` 增加「较短规范化标题为较长标题子串且多出的字符数在阈值内」。人工巡检可跑 `V1/scripts/scan_title_duplicate_pairs.py`。
+- **编码兼容与正文提取（2026-04-29）**：新闻站点编码不一致时，直接用 `resp.text` 易出现中文乱码（`ï¿½` 等）；抓取层应基于 `resp.content` 做多编码候选解码（utf-8/gb18030/gbk 等）并按中文/乱码得分择优。
+- **公众号正文展示规则（2026-04-29）**：若产品要求正文不展示原文链接，需在 `add_draft` 内容拼接层彻底移除“原文链接”段，而不是按来源做条件展示。
+- **摘要格式兜底（2026-04-29）**：即使 prompt 已要求禁止 markdown，仍要在模型输出后做 `**` 清洗，防止前端卡片与正文残留强调符号。
+- **V1 内容风控门禁（2026-04-29）**：对“不可发稿”的约束必须在摘要前执行（先拦截后生成），避免模型调用与草稿上传浪费；同时将短文本阈值（如 `<100`）作为入库前硬门禁。
+- **V1 标题与 snippet 归一化（2026-04-29）**：Google RSS 与 DDGS 结果在入库前需统一做 `normalize_title`（去来源尾缀）+ `normalize_snippet`（HTML 解码、去 `**` 噪声、压缩空白），否则会出现同主题稿件质量不一致和脏文本进摘要。
+- **历史 JSON 字段下线（2026-04-29）**：当 V1 下线某可选字段时，需同步清理 `data/articles.json` 历史键并做两步校验：`json.loads` 可解析 + `rg` 确认键已为 0，保证运行与口径一致。
+- **V1 冻结边界执行（2026-04-29）**：若某能力在 V1 中仅“记录日志/统计”且不参与发布决策（不拦截、不分流），可直接从主链路移除，保留“搜索→去重→摘要→草稿箱→入库”最小闭环；实验性质量门控放入 `V2` 迭代。
+- **V3 聚类与多源摘要（2026-05-12）**：`run_once` 在单篇门禁与库 `exists_duplicate` 之后，对当批 `PreparedArticle` 做 `_global_dedupe_prepared`，再 `_clusters_from_prepared`（按 `topic_key`）+ `_merge_soft_policy_clusters`（禁飞/禁售同窗，`CLUSTER_MERGE_HOURS`）+ `_dedupe_within_cluster`，最后 `SummaryService.summarize_cluster` 生成一篇；簇内仅保留最多 8 条进模型。
+- **去重顺序与阈值（2026-04-28）**：按业务要求固定为“标题相似度>=90% -> URL相同 -> 正文相似度>=80%”，且该顺序不可随意调整。
+- **重复稿件治理（2026-04-28）**：除入库层去重外，还应在单次 `run_once` 增加“URL 规范化 + 标题去重 + 本轮已处理集合”三层防重，避免 Google RSS 参数差异或多关键词召回造成同轮重复发稿。
+- **封面策略优先级（2026-04-28）**：发布时应优先尝试原文首图（`og:image`/`twitter:image`/首个`img`）上传为封面，失败再回退默认封面，能显著减少千篇一律封面图问题。
+- **Google RSS 标题兜底（2026-04-28）**：`<item><title>` 可能返回 `Google News`，需从 `description` 的 `<a>` 文本提取原标题，避免草稿标题被写成通用标题。
+- **Google RSS 正文链接展示（2026-04-28）**：当 `source_url` 为 `news.google.com/rss/articles/...` 时，正文底部不要再追加“原文链接”段，避免与公众号“阅读原文”入口重复。
+- **V1 pipeline 与文件一致性（2026-04-28）**：`pipeline.py` 若 `import src.qa`，仓库里必须始终存在 `V1/src/qa.py`；否则重启调度会 `ModuleNotFoundError`，定时任务无法启动。
+- **V2 迭代策略（2026-04-28）**：从 V1 升级到 V2 时，先接入 QA 节点并“只记录不拦截发布”，这样能先收集质量基线数据，再安全上线分流策略。
+- **生产与迭代隔离（2026-04-28）**：当 `V1` 已视为线上稳定版本时，任何新特性必须进入独立 `V2` 目录进行文档与开发，避免在生产版本目录内混合迭代。
+- **V1 配置最小化（2026-04-28）**：当链路已收敛为“定时检索→摘要→公众号草稿箱”时，`.env` 应同步删除未使用系统配置（AI Builder/Gemini/SMTP/Feishu/API key 测试字段），降低误配置和误导风险。
+- **V1最小化重构经验（2026-04-28）**：目录重构后要优先检查 `data/` 中是否存在历史软链接（例如封面图），否则 `Path.resolve()` 会指向旧目录导致运行时报“文件不存在”。
+- **版本冻结实践（2026-04-28）**：当用户要求冻结版本时，优先保留“可跑主链路 + 必要文档（README/PRD/流程图）”，其余材料统一归档到独立文档目录，避免运行目录继续膨胀。
+- **DeepSeek fallback 发稿策略（2026-04-27）**：当 DeepSeek/AI Builder 摘要失败时，直接推原文正文；标题需显式前缀 `【原文非摘要】`，避免被误认作 AI 摘要。
+- **标题来源清理（2026-04-27）**：发布标题应剔除尾部来源站点标签（如 `- 人民网`、`| 新华网`、域名后缀），减少“来自哪个网站”的冗余。
+- **封面优先级（2026-04-27）**：原文图不可用时，优先上传 `WECHAT_MP_THUMB_LOCAL_PATH` 本地图；本地图失败再走 `WECHAT_MP_THUMB_MEDIA_ID`。
+- **Scope**: Product is **search ingest → editor summary → WeChat draft** only; `POST /v1/wechat/mp_check`, `POST /v1/schedule/ingest_now`, no Feishu/SMTP.
+- **Secrets**: Never commit `.env`; rotate WeChat AppSecret if exposed.
+- **Ingest window**: `skipped_outside_time_window` counts URLs dropped when publish time is missing or older than `SCHEDULE_ARTICLE_MAX_AGE_HOURS`.
+- **WeChat draft**: Need valid cover — `WECHAT_MP_THUMB_LOCAL_PATH` to a **large enough** JPEG (e.g. ≥900×500); tiny placeholder caused API **53402** cover crop failure. `resolve_thumb_media_id_for_article` 会先用文章原图，失败才落回 env 配置。
+- **Summary backend**: DeepSeek API has no native web search tool; we keep Google News RSS for retrieval and use DeepSeek (via AI Builder or direct `DEEPSEEK_API_KEY`) only for summary. Prefer `deepseek-chat` (V3.x): ~4× cheaper than `deepseek-reasoner` on a 2k/800 token summary, and CoT adds little for faithful rewriting.
+- **AI Builder 401**: Expired/invalid `AI_BUILDER_TOKEN` silently drops every summary to `_fallback_wechat_article` (`【摘要】标题\n1. <a href>...`). Always check `AI Builder.*failed` / HTTP 401 in logs before trusting any generated summary. **现已改为**：`AiService.generate_wechat_article` 首选直连 DeepSeek，只要 `DEEPSEEK_API_KEY` 可用就绕过 AI Builder。
+- **Google News URL**: `news.google.com/rss/articles/...` 是客户端跳转占位页，直接 `httpx` 抓不到正文。用 `googlenewsdecoder`（内部走 `batchexecute` 的 `Fbv4je` RPC）还原到真实站内 URL；自写 payload 长期被 Google 以 `[3]` 拒掉，**直接依赖社区维护包**更稳，必要时配代理。
+- **Chinese news site scraping**: 新浪、第一财经、财新、人民网、中国新闻网、澎湃 2024 以后均为 SPA，站内搜索无 HTML 结果；Bing 服务端 `site:` 查询会被 302 回首页。可行策略：`Google News RSS + site:` 扇出 + redirect URL 解码。
+- **`.env` 必配 key**：`DEEPSEEK_API_KEY` 留空时链路会悄悄退化：先试 AI Builder → 401 → 本地 `_fallback_wechat_article`，最终摘要是 `【摘要】title\n1. <a href>...` 这种无信息模板，且不会显式报错。排查时先跑 `python -c "from config.settings import Settings; s=Settings(); print(bool(s.deepseek_api_key))"`，再看服务日志里有没有 `Direct DeepSeek` 开头的行；只要没有这行，就是没走 DeepSeek。
+- **End-to-end smoke test 命令**（跳过前端，直接验证链路）：`curl -m 25 -X POST -H 'X-API-Key: dev-key' -H 'Content-Type: application/json' -d '{"query":"低空经济 ...","max_results":15,"dedupe_before_ingest":true,"include_global":true}' /v1/web_search_auto_ingest` → `GET /v1/articles/today_unique` → 对某条 `POST /v1/articles/{id}/generate_summary`（单次 7–16 s）→ `PATCH status=ready_for_review` → `POST /review?decision=approve` → `POST /publish`；日志里出现 `WeChat draft created: {'media_id': ...}` 即落入公众号草稿箱。
+- **用户检索优先级（2026-04-20 复述）**：默认返回必须围绕低空经济/无人机/eVTOL；排序优先级固定为「国内政策（中央→一线/新一线/超一线地方）> 中外竞争合作 > 面向大众可读的前沿技术」。`today_unique` 是“当天所有入库”的总集合，不等价于“本次检索结果”，会混入早前其他关键词（如黄金/美伊）内容；对外给用户前应先按当前主题与分类再过滤一次。
+- **查询词实操建议**：`低空经济 无人机 eVTOL 政策 合作 技术发展` 这种多关键词 AND 语义在 Google News `site:` 扇出下会明显收缩结果，可能被强相关过滤后变 0；线上建议优先用核心词（如 `低空经济`）检索，再由服务端排序和噪声剔除控质量。
+- **CAAC 数据源接入**：产品内“数据源管理”可通过 `POST /v1/data_sources` 新增 `{"name":"中国民航局","kind":"web","value":"www.caac.gov.cn"}`，用于可选站点定向检索；代码级扇出源 `services/cn_news_search.py` 的 `POLICY_SITES` 已默认包含 `caac.gov.cn`。
+- **入库去重规则（当前生效）**：入库前先比 URL；URL 不同再比标题相似度（>=90% 视为重复，直接跳过）；再比正文相似度（>=90% 跳过）。确保“库中没有的新内容”才保留。
+- **关键词配置位置（已合并）**：主业务定时检索词统一读取 workspace 配置 `config/search_keywords.json`（分类键：`national_policy / local_policy / intl_coopcomp / frontier_tech`）；手动接口 `POST /v1/web_search(_auto_ingest)` 的 `query` 仍以请求体为准。
+- **定时自动发布已打通（2026-04-21）**：`services/scheduled_push.py` 现为全链路（检索→摘要→自动写入公众号草稿箱）；默认按 `SCHEDULE_MAX_INGEST` 上限（20）发布，少于上限按实际数量发布。
+- **微信长度限制踩坑**：`draft/add` 对标题与摘要（digest）按字节严格限长；仅做字符截断会触发 `45003/45004`。已在 `services/wechat_mp_draft.py` 增加 UTF-8 字节截断 + 分级重试（标题 64→48→32→24 bytes，digest 120→90→60→40→24 bytes）。
+- **公众号正文出现 `\\u9ad8` 字面量**：LLM 把 CJK 以 JSON escape 形式写在纯文本里。用 `decode_json_unicode_escapes`（循环解码防双转义）在出稿与 `draft/add` 前统一还原；新稿在 `AiService` 出口即解码。
+- **`search_cn_news` 无 `timeout` 参数**：`services/cn_news_search.search_cn_news` 签名里没有 `timeout`；`AiService.web_search` 传入会抛 `TypeError`，整条扇出检索失败。已去掉该实参（内部 client 自有 connect/read 超时）。
+- **Google 不可达时的检索**：环境变量 `NEWS_SEARCH_FALLBACK`（默认 `all`）在扇出结果经 7d/2d 过滤后仍为空时，合并 **DDGS**。单条 `_public_web_search` 在 Google RSS 异常或为空时同样回落 DDGS。关闭备用：`NEWS_SEARCH_FALLBACK=off`。
+- **开源检索库实测结论（本机 2026-04-22）**：优先选 `ddgs`（可直接跑通）+ `@iflow-mcp/open-websearch`（适合接入 MCP 客户端）；`websearch4ai` 当前为占位函数，`spower` 安装后缺依赖不可用，`tourist`（PyPI）并非本需求中的 SERP 替代项目。`ddgs` 在 Python 3.9 可能触发 TLSv1.3 不兼容，临时可用 `verify=False`，长期建议 Python 3.11+。
+- **时间窗口径**：`AiService.web_search` 的 7天/2天是“上游预筛”；真正入库发布链路还会再应用 `max_article_age_hours`（默认14h，`main._max_article_age_hours_for_ingest` → `web_search_ingest`）。对外文案应明确这两层窗口避免误导。
+- **DDGS fallback 接入策略**：`NEWS_SEARCH_FALLBACK=all` 与 `ddgs` 等价（均为 DDGS）；单条 `_public_web_search` 在 Google 为空后试 DDGS。DDGS 调用优先 `verify=True`，失败后自动降级 `verify=False` 以兼容 Python 3.9 TLS 环境。
+- **可运行的搜索稳态策略（wechat_auto_pipeline_project）**：优先 Google RSS，失败后尝试 Bing RSS，再兜底 DDGS；单工具重试上限 3，三工具都失败则直接暂停任务，避免无限卡在外部检索。
+- **DDGS 无发布时间**：`ddgs.text` 结果常无 `published_at`；`_fan_out_records_from_hit_dicts` / `_public_items_from_fallback_rows` 原逻辑会丢弃无日期行。已对 `source_id=ddgs` 用当前 UTC 时间占位，避免 fallback 永远为空。

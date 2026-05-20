@@ -26,6 +26,8 @@ npm run dev
 
 连接后端：在 `.env.local` 设置 `BFF_BASE_URL=http://127.0.0.1:8787`（先启动 `V3` 的 `run-bff`）。未配置时自动使用 `lib/mock/`。
 
+**演示采集**：顶栏或 Dashboard 点击「开始采集搜索」，会后台执行 V3 `run-once` 并显示「开始进行搜索了…」；完成后刷新事件列表即可看到新入库数据。
+
 ```bash
 npm run build   # 生产构建（--webpack）
 ```

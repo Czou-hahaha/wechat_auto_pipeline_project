@@ -55,11 +55,15 @@ class Settings(BaseSettings):
     # 兼容根目录旧字段
     schedule_search_site_domain: str = Field(default="", alias="SCHEDULE_SEARCH_SITE_DOMAIN")
     search_max_results: int = Field(default=20, ge=1, le=100, alias="SEARCH_MAX_RESULTS")
-    max_article_age_hours: int = Field(default=14, ge=0, le=168, alias="MAX_ARTICLE_AGE_HOURS")
+    max_article_age_hours: int = Field(default=14, ge=0, le=8760, alias="MAX_ARTICLE_AGE_HOURS")
     # 仅解析到「日历日」无可靠时刻时：按上海日历日与「今天」相差不超过该天数则视为在窗内；仍依赖 URL/标题历史去重
     date_only_max_calendar_age_days: int = Field(default=3, ge=1, le=14, alias="DATE_ONLY_MAX_CALENDAR_AGE_DAYS")
     max_publish_per_run: int = Field(default=21, ge=1, le=100, alias="MAX_PUBLISH_PER_RUN")
     max_publish_per_day: int = Field(default=10, ge=1, le=200, alias="MAX_PUBLISH_PER_DAY")
+    # 摘要/推送：按 importance 取前 N 个事件；不足 N 则有几个处理几个
+    wechat_publish_top_n: int = Field(default=3, ge=1, le=10, alias="WECHAT_PUBLISH_TOP_N")
+    # 同一 topic/标题指纹在冷却期内已推过公众号则跳过
+    wechat_publish_cooldown_days: int = Field(default=3, ge=0, le=30, alias="WECHAT_PUBLISH_COOLDOWN_DAYS")
     # 主题聚类：同窗内政策相关稿（如禁飞/禁售）软合并的最大时间跨度（小时）
     cluster_merge_hours: int = Field(default=72, ge=1, le=168, alias="CLUSTER_MERGE_HOURS")
     # false: run-once 仅入库待抽检，不自动推送公众号；true: 自动推送
@@ -74,21 +78,60 @@ class Settings(BaseSettings):
     rss_per_feed_max: int = Field(default=30, ge=1, le=200, alias="RSS_PER_FEED_MAX")
     rss_total_max: int = Field(default=500, ge=10, le=5000, alias="RSS_TOTAL_MAX")
     rss_timeout_sec: float = Field(default=25.0, ge=5.0, le=120.0, alias="RSS_TIMEOUT_SEC")
+    html_list_timeout_sec: float = Field(default=20.0, ge=5.0, le=120.0, alias="HTML_LIST_TIMEOUT_SEC")
+
+    # 抓正文前：标题+摘要轻量过滤（GDELT 误召回）
+    search_prefilter_enabled: bool = Field(default=True, alias="SEARCH_PREFILTER_ENABLED")
+    # 簇摘要+QA 并行度（DeepSeek 限速下 2–3；推送微信时建议 1）
+    deepseek_cluster_concurrency: int = Field(default=3, ge=1, le=8, alias="DEEPSEEK_CLUSTER_CONCURRENCY")
+    cluster_summary_min_chars: int = Field(default=800, ge=800, le=2000, alias="CLUSTER_SUMMARY_MIN_CHARS")
+    cluster_summary_max_chars: int = Field(default=1500, ge=800, le=2500, alias="CLUSTER_SUMMARY_MAX_CHARS")
+    # 簇摘要 prompt 最多几篇素材；每篇摘录上限（须给摘录，不能只给链接）
+    cluster_summary_max_sources: int = Field(default=5, ge=1, le=10, alias="CLUSTER_SUMMARY_MAX_SOURCES")
+    cluster_summary_excerpt_chars: int = Field(
+        default=1500, ge=400, le=4000, alias="CLUSTER_SUMMARY_EXCERPT_CHARS"
+    )
+    # true：仅抓 data_sources 里中文 html_list（见 ingest_zh_html_source_ids）
+    ingest_zh_html_only: bool = Field(default=False, alias="INGEST_ZH_HTML_ONLY")
+    # 逗号分隔 source id；空且 INGEST_ZH_HTML_ONLY=true 时取全部中文 html_list
+    ingest_zh_html_source_ids: str = Field(default="", alias="INGEST_ZH_HTML_SOURCE_IDS")
+    # 逗号分隔 URL：本轮强制纳入候选（如 FCC 稿），仍走正文抓取与后续流程
+    ingest_pin_urls: str = Field(default="", alias="INGEST_PIN_URLS")
 
     gdelt_base_url: str = Field(
         default="https://api.gdeltproject.org/api/v2/doc/doc",
         alias="GDELT_BASE_URL",
     )
     gdelt_timeout_sec: float = Field(default=45.0, ge=10.0, le=180.0, alias="GDELT_TIMEOUT_SEC")
+    # 第 2、3 次重试的单次 HTTP 超时（避免 ConnectTimeout 卡满 45s 像死机）
+    gdelt_retry_timeout_sec: float = Field(default=15.0, ge=5.0, le=60.0, alias="GDELT_RETRY_TIMEOUT_SEC")
     gdelt_max_records: int = Field(default=50, ge=1, le=75, alias="GDELT_MAX_RECORDS")
-    # 主题级 GDELT：并发与请求间隔，降低 429
-    gdelt_max_concurrent: int = Field(default=2, ge=1, le=8, alias="GDELT_MAX_CONCURRENT")
-    gdelt_min_interval_sec: float = Field(default=2.0, ge=0.0, le=30.0, alias="GDELT_MIN_INTERVAL_SEC")
+    # GDELT DOC timespan（推荐 1h；勿用 7d/30d，年龄过滤在本地 filter_by_age）
+    gdelt_timespan: str = Field(default="1h", alias="GDELT_TIMESPAN")
+    gdelt_max_retries: int = Field(default=3, ge=1, le=5, alias="GDELT_MAX_RETRIES")
+    gdelt_cache_ttl_min: int = Field(default=30, ge=1, le=240, alias="GDELT_CACHE_TTL_MIN")
+    # 主题级 GDELT：一词一请求、串行；全进程共享间隔（实际 max(5, 配置值) 秒）
+    gdelt_max_concurrent: int = Field(default=1, ge=1, le=1, alias="GDELT_MAX_CONCURRENT")
+    gdelt_min_interval_sec: float = Field(default=5.0, ge=5.0, le=60.0, alias="GDELT_MIN_INTERVAL_SEC")
     gdelt_or_max_terms_per_query: int = Field(default=14, ge=3, le=25, alias="GDELT_OR_MAX_TERMS_PER_QUERY")
+    # false=主链路 GDELT 仅搜 english_keywords（推荐）；true=追加 chinese_keywords
+    gdelt_chinese_enabled: bool = Field(default=False, alias="GDELT_CHINESE_ENABLED")
+    # 检索阶段：RSS/HTML 缺 published_at 时抓落地页补全（与 tests/integration/run_search_flow 一致）
+    search_article_page_backfill: bool = Field(default=True, alias="SEARCH_ARTICLE_PAGE_BACKFILL")
+    search_article_page_backfill_max_concurrent: int = Field(
+        default=4, ge=1, le=16, alias="SEARCH_ARTICLE_PAGE_BACKFILL_MAX_CONCURRENT"
+    )
+    search_article_page_fetch_timeout_sec: float = Field(
+        default=35.0, ge=10.0, le=120.0, alias="SEARCH_ARTICLE_PAGE_FETCH_TIMEOUT_SEC"
+    )
     # true=恢复旧版 (query) domain:site 扇出（不推荐）
     gdelt_site_scoped_enabled: bool = Field(default=False, alias="GDELT_SITE_SCOPED_ENABLED")
 
     rss_relevance_filter_enabled: bool = Field(default=True, alias="RSS_RELEVANCE_FILTER_ENABLED")
+    # true：摘要成功写入公众号草稿箱后，清空 articles.json 中对应条目的 extracted_text（仅保留 summary）
+    strip_extracted_text_after_wechat_draft: bool = Field(
+        default=True, alias="STRIP_EXTRACTED_TEXT_AFTER_WECHAT_DRAFT"
+    )
 
     # 可选：全文向量去重。embedding_backend=local 时用本机 sentence-transformers（免 KEY）；http 时用 OpenAI 兼容 /v1/embeddings
     embedding_enabled: bool = Field(default=False, alias="EMBEDDING_ENABLED")
@@ -235,6 +278,28 @@ class Settings(BaseSettings):
             if out:
                 return out
         return []
+
+    def parsed_ingest_pin_urls(self) -> list[str]:
+        raw = (self.ingest_pin_urls or "").strip()
+        if not raw:
+            return []
+        return [u.strip() for u in raw.replace("，", ",").split(",") if u.strip().startswith("http")]
+
+    def parsed_ingest_zh_html_source_ids(self) -> list[str]:
+        raw = (self.ingest_zh_html_source_ids or "").strip()
+        if not raw:
+            return []
+        return [x.strip() for x in raw.replace("，", ",").split(",") if x.strip()]
+
+    def parsed_gdelt_english_keywords(self) -> list[str]:
+        """主链路 GDELT 专用词表；未配置 ``gdelt_english_keywords`` 时回退 ``english_keywords``。"""
+        data = self._load_keywords_json()
+        chunk = data.get("gdelt_english_keywords")
+        if isinstance(chunk, list):
+            out = self._dedupe_queries(chunk)
+            if out:
+                return out
+        return self.parsed_english_keywords()
 
     def parsed_site_queries(self) -> list[str]:
         """兼容旧逻辑：合并站点/分类/中英词。主链路 ingest 已改用主题级 GDELT，仅在为 True 时使用。"""

@@ -19,6 +19,8 @@ export function useDashboard() {
   return useQuery({
     queryKey: ["dashboard"],
     queryFn: () => jsonFetch<DashboardData>("/api/dashboard"),
+    staleTime: 0,
+    refetchOnMount: "always",
     refetchInterval: 30_000,
   });
 }
@@ -61,12 +63,12 @@ export function useQAReviews(minScore = 0, maxScore = 100) {
   });
 }
 
-export function useSearchQuery(q: string, mode: string) {
+export function useSearchQuery(q: string) {
   return useQuery({
-    queryKey: ["search", q, mode],
+    queryKey: ["search", q],
     queryFn: () =>
       jsonFetch<{ items: EventListItem[]; total: number; mode: string }>(
-        `/api/search?q=${encodeURIComponent(q)}&type=${mode}`,
+        `/api/search?q=${encodeURIComponent(q)}`,
       ),
     enabled: q.length > 0,
   });

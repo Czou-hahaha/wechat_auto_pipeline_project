@@ -192,10 +192,13 @@ async def search_with_toolchain(
     GDELT DOC 检索：站点阶段 ``(query) domain:host``，失败或关闭回退时再跑全域 ``query``。
     """
     from src.config import Settings
-    from src.gdelt_search import gdelt_doc_search, gdelt_timespan_for_hours
+    from src.gdelt_search import gdelt_doc_search, resolve_gdelt_timespan
 
     s = Settings()
-    ts = gdelt_timespan_for_hours(s.max_article_age_hours)
+    ts = resolve_gdelt_timespan(
+        explicit=str(s.gdelt_timespan or ""),
+        max_article_age_hours=int(s.max_article_age_hours),
+    )
     to = float(s.gdelt_timeout_sec)
     bu = (s.gdelt_base_url or "https://api.gdeltproject.org/api/v2/doc/doc").strip()
     cap = max(1, min(int(s.gdelt_max_records), 75))
@@ -234,91 +237,81 @@ def _chunk_terms(terms: list[str], size: int) -> list[list[str]]:
 
 async def search_gdelt_topics_bilingual(settings: "object") -> tuple[list[SearchHit], int]:
     """
-    主题级 GDELT：按 ``search_keywords.json`` 的 ``chinese_keywords`` / ``english_keywords``
-    各组 OR 查询（过长则分批），带并发上限与请求间隔，降低 429。
+    主题级 GDELT：默认仅 ``gdelt_english_keywords``，**一词一请求**、严格串行。
+
+    全局 ``http_core`` 限速（默认 5s/次）、退避重试、30 分钟磁盘缓存。
+  时间窗过滤在本地 ``filter_by_age`` 完成，API 侧默认 ``timespan=1h``。
 
     Returns:
         (合并去重后的 hits, GDELT HTTP 请求次数)
     """
     from src.config import Settings
-    from src.gdelt_search import gdelt_build_or_query, gdelt_doc_search_with_client, gdelt_timespan_for_hours
+    from src.gdelt_search import (
+        _http_config_from_settings,
+        gdelt_doc_search_with_client,
+        gdelt_format_or_term,
+        resolve_gdelt_timespan,
+    )
 
     if not isinstance(settings, Settings):
         raise TypeError("settings must be Settings")
-    ts = gdelt_timespan_for_hours(settings.max_article_age_hours)
+    ts = resolve_gdelt_timespan(
+        explicit=str(settings.gdelt_timespan or ""),
+        max_article_age_hours=int(settings.max_article_age_hours),
+    )
     cap = max(1, min(int(settings.gdelt_max_records), 75))
     to = float(settings.gdelt_timeout_sec)
     bu = (settings.gdelt_base_url or "").strip() or "https://api.gdeltproject.org/api/v2/doc/doc"
-    per = max(3, int(settings.gdelt_or_max_terms_per_query))
-    sem_n = max(1, int(settings.gdelt_max_concurrent))
-    interval = max(0.0, float(settings.gdelt_min_interval_sec))
+    http_cfg = _http_config_from_settings(settings)
 
-    zh = settings.parsed_chinese_keywords()
-    en = settings.parsed_english_keywords()
-    batches: list[tuple[str, str]] = []
-    for i, chunk in enumerate(_chunk_terms(zh, per)):
-        q = gdelt_build_or_query(chunk)
-        if q:
-            batches.append((f"zh_batch_{i}", q))
-    for i, chunk in enumerate(_chunk_terms(en, per)):
-        q = gdelt_build_or_query(chunk)
-        if q:
-            batches.append((f"en_batch_{i}", q))
+    terms: list[str] = list(settings.parsed_gdelt_english_keywords())
+    if bool(getattr(settings, "gdelt_chinese_enabled", False)):
+        terms.extend(settings.parsed_chinese_keywords())
+    seen_terms: set[str] = set()
+    unique_terms: list[str] = []
+    for t in terms:
+        key = (t or "").strip().lower()
+        if key and key not in seen_terms:
+            seen_terms.add(key)
+            unique_terms.append(t.strip())
 
-    if not batches:
+    if not unique_terms:
         return [], 0
 
     merged: list[SearchHit] = []
     http_requests = 0
-    sem = asyncio.Semaphore(sem_n)
 
-    async with httpx.AsyncClient(timeout=to, follow_redirects=True) as client:
+    async with httpx.AsyncClient(timeout=to, follow_redirects=True, trust_env=False) as client:
+        for idx, term in enumerate(unique_terms):
+            q = gdelt_format_or_term(term)
+            if not q:
+                continue
+            label = f"term_{idx}"
+            rows = await gdelt_doc_search_with_client(
+                client,
+                query=q,
+                max_results=cap,
+                timespan=ts,
+                base_url=bu,
+                request_timeout=to,
+                http_config=http_cfg,
+            )
+            http_requests += 1
+            if rows:
+                logger.info("gdelt term ok label=%s term=%r rows=%d", label, term[:40], len(rows))
+                merged.extend(rows)
+            else:
+                logger.info("gdelt term empty label=%s term=%r timespan=%s", label, term[:40], ts)
 
-        async def run_one(label: str, query: str) -> list[SearchHit]:
-            nonlocal http_requests
-            async with sem:
-                await asyncio.sleep(interval)
-                for attempt in range(1, 4):
-                    try:
-                        rows = await gdelt_doc_search_with_client(
-                            client,
-                            query=query,
-                            max_results=cap,
-                            timespan=ts,
-                            base_url=bu,
-                        )
-                        http_requests += 1
-                        if rows:
-                            logger.info(
-                                "gdelt topic batch ok label=%s rows=%d attempt=%d",
-                                label,
-                                len(rows),
-                                attempt,
-                            )
-                            return rows
-                        logger.warning("gdelt empty body label=%s (no retry)", label)
-                        return []
-                    except httpx.HTTPStatusError as exc:
-                        http_requests += 1
-                        code = exc.response.status_code if exc.response is not None else 0
-                        if code == 429 and attempt < 3:
-                            wait = min(8.0, 2.0 * attempt)
-                            logger.warning("gdelt 429 label=%s attempt=%d sleep=%.1fs", label, attempt, wait)
-                            await asyncio.sleep(wait)
-                            continue
-                        logger.warning("gdelt http label=%s code=%s", label, code, exc_info=True)
-                        return []
-                    except Exception:
-                        http_requests += 1
-                        logger.warning("gdelt batch failed label=%s attempt=%d", label, attempt, exc_info=True)
-                    if attempt < 3:
-                        await asyncio.sleep(min(2.0 * attempt, 6.0))
-                return []
-
-        parts = await asyncio.gather(*[run_one(lbl, q) for lbl, q in batches])
-    for chunk in parts:
-        merged.extend(chunk)
     merged = _dedupe_hits(merged, max_results=max(1500, int(settings.search_max_results) * 50))
+    logger.info(
+        "gdelt serial done: terms=%d http_requests=%d rows=%d timespan=%s chinese_enabled=%s",
+        len(unique_terms),
+        http_requests,
+        len(merged),
+        ts,
+        bool(getattr(settings, "gdelt_chinese_enabled", False)),
+    )
     return merged, http_requests
 
 

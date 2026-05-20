@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 from dataclasses import dataclass
@@ -20,7 +21,7 @@ from bs4 import BeautifulSoup
 
 from src.ai import SummaryService
 from src.config import Settings
-from src.ingest_cluster import build_embedding_event_clusters
+from src.ingest_cluster import build_embedding_event_clusters, merge_clusters_by_embedding
 from src.rss_aggregate import aggregate_rss_from_data_sources
 from src.search import (
     SearchHit,
@@ -33,6 +34,14 @@ from src.search import (
 from src.storage import ArticleRecord, EventRecord, JsonStore
 from src.utils.article_extract import main_text_with_trafilatura_fallback
 from src.utils.http_decode import decode_http_html_bytes
+from src.utils.cluster_importance import score_prepared_cluster
+from src.utils.cluster_summary_payload import build_cluster_summary_items
+from src.utils.topic_prefilter import (
+    should_fetch_search_hit,
+    should_fetch_zh_media_hit,
+    should_keep_editorial_content,
+)
+from src.utils.summary_html import summary_visible_char_count
 from src.wechat import WeChatDraftClient
 
 logger = logging.getLogger(__name__)
@@ -89,6 +98,9 @@ class RunStats:
     skipped_too_short: int = 0
     skipped_summary_fallback: int = 0
     skipped_qa: int = 0
+    skipped_prefilter: int = 0
+    skipped_summarize_cap: int = 0
+    skipped_insufficient_articles: int = 0
     staged_for_review: int = 0
     failed: int = 0
 
@@ -146,6 +158,7 @@ class TodayDraftPushStats:
     skipped_already: int = 0
     skipped_empty: int = 0
     skipped_outdated: int = 0
+    skipped_too_short: int = 0
     skipped_qa: int = 0
     pushed: int = 0
     failed: int = 0
@@ -197,6 +210,81 @@ class PipelineRunner:
             app_secret=settings.wechat_mp_app_secret,
             author=settings.wechat_mp_author,
         )
+        self._scoring_lists: tuple[list[str], list[str]] | None = None
+        self._expansion_config_cache = None
+
+    def _expansion_config(self):
+        if not hasattr(self, "_expansion_config_cache") or self._expansion_config_cache is None:
+            from event_enhancement.config_expansion import ExpansionConfig
+            from src.event_enhancement_workflow import _enhancement_config_path
+
+            self._expansion_config_cache = ExpansionConfig.from_path(
+                _enhancement_config_path(self.settings)
+            )
+        return self._expansion_config_cache
+
+    def _pinned_search_hits(self) -> list[SearchHit]:
+        rows: list[SearchHit] = []
+        now_iso = datetime.now(timezone.utc).isoformat()
+        for url in self.settings.parsed_ingest_pin_urls():
+            rows.append(
+                SearchHit(
+                    title="",
+                    url=url,
+                    snippet="",
+                    published_at=now_iso,
+                    from_rss=False,
+                )
+            )
+        return rows
+
+    @staticmethod
+    def _cluster_passes_editorial(cluster: list[PreparedArticle]) -> bool:
+        if not cluster:
+            return False
+        primary = cluster[0]
+        return should_keep_editorial_content(
+            title=primary.title,
+            snippet=primary.hit.snippet or "",
+            text=primary.text[:1200],
+            url=primary.hit.url or primary.final_url or "",
+        )
+
+    def _expansion_scoring_lists(self) -> tuple[list[str], list[str]]:
+        if self._scoring_lists is None:
+            exp = self._expansion_config()
+            self._scoring_lists = (list(exp.important_hosts), list(exp.keywords))
+        return self._scoring_lists
+
+    def _cluster_publish_identity(self, cluster: list[PreparedArticle]) -> str:
+        topic = self._dominant_topic_key_for_cluster(cluster)
+        if topic:
+            return f"topic:{topic}"
+        primary = self._pick_primary_article(cluster)
+        return f"title:{JsonStore._norm_text(primary.title)}"
+
+    def _cluster_published_within_cooldown(self, cluster: list[PreparedArticle], *, days: int) -> bool:
+        if days <= 0:
+            return False
+        identity = self._cluster_publish_identity(cluster)
+        tz = ZoneInfo(self.settings.schedule_timezone.strip() or "Asia/Shanghai")
+        cutoff = datetime.now(tz) - timedelta(days=days)
+        for row in self.store.list_all():
+            if not isinstance(row, dict):
+                continue
+            pushed_raw = str(row.get("wechat_draft_pushed_at") or row.get("published_at") or "").strip()
+            if not pushed_raw:
+                continue
+            pushed = self._parse_iso_datetime(pushed_raw)
+            if pushed is None or pushed.astimezone(tz) < cutoff:
+                continue
+            row_topic = str(row.get("topic_key") or "").strip().lower()
+            if row_topic and identity == f"topic:{row_topic}":
+                return True
+            row_title = f"title:{JsonStore._norm_text(str(row.get('title') or ''))}"
+            if row_title and identity == row_title:
+                return True
+        return False
 
     def _global_dedupe_prepared(self, items: list[PreparedArticle], stats: RunStats) -> list[PreparedArticle]:
         """本批候选在抓取后的全局去重（URL/标题/正文近重复）。"""
@@ -233,60 +321,7 @@ class PipelineRunner:
             else:
                 tails.append(p)
         clusters = [v for v in groups.values() if v] + [[x] for x in tails]
-        return self._merge_soft_policy_clusters(clusters)
-
-    def _merge_soft_policy_clusters(self, clusters: list[list[PreparedArticle]]) -> list[list[PreparedArticle]]:
-        """同窗内政策相关（如禁飞/禁售）且均为重要 topic 的簇做软合并。"""
-        n = len(clusters)
-        if n <= 1:
-            return clusters
-        parent = list(range(n))
-
-        def find(i: int) -> int:
-            while parent[i] != i:
-                parent[i] = parent[parent[i]]
-                i = parent[i]
-            return i
-
-        def union(i: int, j: int) -> None:
-            ri, rj = find(i), find(j)
-            if ri != rj:
-                parent[rj] = ri
-
-        for i in range(n):
-            for j in range(i + 1, n):
-                if self._clusters_policy_mergeable(clusters[i], clusters[j]):
-                    union(i, j)
-        buckets: dict[int, list[PreparedArticle]] = defaultdict(list)
-        for i in range(n):
-            buckets[find(i)].extend(clusters[i])
-        return list(buckets.values())
-
-    def _clusters_policy_mergeable(self, a: list[PreparedArticle], b: list[PreparedArticle]) -> bool:
-        if not any(p.topic_is_important for p in a) or not any(p.topic_is_important for p in b):
-            return False
-        span = self._cluster_time_span_hours(a + b)
-        if span > float(self.settings.cluster_merge_hours):
-            return False
-        titles = [p.title for p in a] + [p.title for p in b]
-        return self._policy_drone_ban_pack(titles)
-
-    @staticmethod
-    def _policy_drone_ban_pack(titles: list[str]) -> bool:
-        blob = " ".join(titles)
-        drone = ("无人机" in blob) or ("无人驾驶" in blob) or ("drone" in blob.lower())
-        ban = ("禁飞" in blob) or ("禁售" in blob)
-        return drone and ban
-
-    def _cluster_time_span_hours(self, parts: list[PreparedArticle]) -> float:
-        times: list[datetime] = []
-        for p in parts:
-            dt = self._parse_iso_datetime(p.source_published_at)
-            if dt is not None:
-                times.append(dt)
-        if len(times) < 2:
-            return 0.0
-        return (max(times) - min(times)).total_seconds() / 3600.0
+        return clusters
 
     def _dedupe_within_cluster(self, cluster: list[PreparedArticle]) -> list[PreparedArticle]:
         ordered = sorted(cluster, key=lambda p: p.source_published_at or "")
@@ -297,7 +332,10 @@ class PipelineRunner:
             kept.append(p)
         return kept[:8] if kept else []
 
-    def _order_clusters_for_publish(self, clusters: list[list[PreparedArticle]]) -> list[list[PreparedArticle]]:
+    def _eligible_clusters_after_novelty(
+        self, clusters: list[list[PreparedArticle]]
+    ) -> list[list[PreparedArticle]]:
+        """重要主题配额与历史新颖度过滤（在 importance 排序之前）。"""
         tz = ZoneInfo(self.settings.schedule_timezone.strip() or "Asia/Shanghai")
         today = datetime.now(tz).date()
         existing_topics: set[str] = set()
@@ -337,6 +375,42 @@ class PipelineRunner:
                 existing_topics.add(primary_key)
         out.extend(other_clusters)
         return out
+
+    def _select_top_importance_clusters(
+        self, clusters: list[list[PreparedArticle]]
+    ) -> list[tuple[int, list[PreparedArticle]]]:
+        """按 importance 降序，跳过冷却期内已推送，取前 ``WECHAT_PUBLISH_TOP_N`` 个簇做摘要。"""
+        hosts, keywords = self._expansion_scoring_lists()
+        now = datetime.now(timezone.utc)
+        eligible = self._eligible_clusters_after_novelty(clusters)
+        scored: list[tuple[int, list[PreparedArticle]]] = []
+        for cluster in eligible:
+            score = score_prepared_cluster(
+                cluster, important_hosts=hosts, keywords=keywords, now=now
+            )
+            scored.append((score, cluster))
+        scored.sort(
+            key=lambda x: (
+                -x[0],
+                max((p.source_published_at or "") for p in x[1]) if x[1] else "",
+            ),
+        )
+        top_n = max(1, int(self.settings.wechat_publish_top_n))
+        cooldown = int(self.settings.wechat_publish_cooldown_days)
+        selected: list[tuple[int, list[PreparedArticle]]] = []
+        for score, cluster in scored:
+            if cooldown > 0 and self._cluster_published_within_cooldown(cluster, days=cooldown):
+                primary = self._pick_primary_article(cluster)
+                logger.info(
+                    "skip cluster publish cooldown: score=%d title=%s",
+                    score,
+                    primary.title[:80],
+                )
+                continue
+            selected.append((score, cluster))
+            if len(selected) >= top_n:
+                break
+        return selected
 
     @staticmethod
     def _dominant_topic_key_for_cluster(cluster: list[PreparedArticle]) -> str:
@@ -393,8 +467,10 @@ class PipelineRunner:
         if publish_to_wechat and not self.settings.wechat_ready():
             raise ValueError("微信公众号参数未配置完整（WECHAT_MP_APP_ID / WECHAT_MP_APP_SECRET）")
 
+        zh_html_only = bool(self.settings.ingest_zh_html_only)
         logger.info(
-            "run_once ingest: rss_then_gdelt | gdelt_site_scoped=%s target_sites=%d",
+            "run_once ingest: %s | gdelt_site_scoped=%s target_sites=%d",
+            "zh_html_list_only" if zh_html_only else "rss_then_gdelt",
             self.settings.gdelt_site_scoped_enabled,
             len(target_sites),
         )
@@ -481,7 +557,7 @@ class PipelineRunner:
                         perf_counter() - q_started,
                     )
                     global_phase_hits.extend(rows)
-        else:
+        elif not zh_html_only:
             zh_kw = self.settings.parsed_chinese_keywords()
             en_kw = self.settings.parsed_english_keywords()
             if not zh_kw and not en_kw:
@@ -490,14 +566,35 @@ class PipelineRunner:
                 )
             global_phase_hits, gdelt_http = await search_gdelt_topics_bilingual(self.settings)
             logger.info(
-                "gdelt topic bilingual rows=%d http_requests=%d zh_terms=%d en_terms=%d",
+                "gdelt topic english-serial rows=%d http_requests=%d en_terms=%d zh_gdelt=%s",
                 len(global_phase_hits),
                 gdelt_http,
-                len(zh_kw),
                 len(en_kw),
+                self.settings.gdelt_chinese_enabled,
             )
+            if global_phase_hits:
+                try:
+                    from src.utils.gdelt_ingest_store import write_gdelt_ingest_snapshot
 
-        all_hits = merge_search_hits(rss_hits, site_phase_hits, global_phase_hits, max_total=merge_cap)
+                    write_gdelt_ingest_snapshot(
+                        self.settings.data_dir,
+                        global_phase_hits,
+                        meta={
+                            "source": "search_gdelt_topics_bilingual",
+                            "http_requests": gdelt_http,
+                            "timespan": self.settings.gdelt_timespan or "1h",
+                        },
+                    )
+                except Exception:
+                    logger.warning("gdelt ingest snapshot write failed", exc_info=True)
+        else:
+            logger.info("phase gdelt skipped: INGEST_ZH_HTML_ONLY=true")
+
+        pin_hits = self._pinned_search_hits()
+        if pin_hits:
+            logger.info("ingest pin urls: count=%d", len(pin_hits))
+
+        all_hits = merge_search_hits(rss_hits, site_phase_hits, global_phase_hits, pin_hits, max_total=merge_cap)
         logger.info(
             "search phase result: site_phase_effective=%s site_gdelt_rows=%d global_gdelt_rows=%d merged=%d",
             site_phase_effective,
@@ -516,16 +613,31 @@ class PipelineRunner:
             key = self._canonical_url(hit.url)
             if key and key not in unique:
                 unique[key] = hit
-        candidates = filter_by_age(list(unique.values()), self.settings.max_article_age_hours)
+        unique_hits = list(unique.values())
+        from src.utils.search_published_at_backfill import backfill_missing_published_at
+
+        unique_hits, _ = await backfill_missing_published_at(unique_hits, self.settings)
+        candidates = filter_by_age(unique_hits, self.settings.max_article_age_hours)
         candidates = candidates[: max(self.settings.max_publish_per_run, 50)]
+        skipped_pf = 0
+        if self.settings.search_prefilter_enabled:
+            kept: list[SearchHit] = []
+            prefilter_fn = (
+                should_fetch_zh_media_hit
+                if self.settings.ingest_zh_html_only
+                else should_fetch_search_hit
+            )
+            for hit in candidates:
+                if prefilter_fn(hit):
+                    kept.append(hit)
+                else:
+                    logger.info("skip pre-fetch topic filter: %s", hit.url)
+            skipped_pf = len(candidates) - len(kept)
+            if skipped_pf:
+                logger.info("pre-fetch topic filter dropped %d/%d hits", skipped_pf, len(candidates))
+            candidates = kept
 
-        thumb = ""
-        if publish_to_wechat:
-            thumb = self.settings.wechat_mp_thumb_media_id.strip()
-            if not thumb:
-                thumb = await self.wechat.upload_local_cover(self.settings.wechat_mp_thumb_local_path)
-
-        stats = RunStats(total_candidates=len(candidates))
+        stats = RunStats(total_candidates=len(candidates), skipped_prefilter=skipped_pf)
         processed_keys: set[str] = set()
         processed_title_norms: set[str] = set()
         seen_landing_fingerprints: set[str] = set()
@@ -610,6 +722,15 @@ class PipelineRunner:
                     source_url=final_url or hit.url,
                 ):
                     stats.skipped_policy += 1
+                    continue
+                if not should_keep_editorial_content(
+                    title=title,
+                    snippet=hit.snippet or "",
+                    text=text[:800],
+                    url=final_url or hit.url,
+                ):
+                    stats.skipped_policy += 1
+                    logger.info("skip editorial filter: %s", hit.url)
                     continue
                 norm_title_key = JsonStore._norm_text(title)
                 if len(norm_title_key) >= 12 and any(
@@ -723,47 +844,297 @@ class PipelineRunner:
         else:
             clusters_merged, reprint_dropped = emb_clusters
             stats.skipped_duplicate += int(reprint_dropped)
-            clusters_merged = self._merge_soft_policy_clusters(clusters_merged)
+        clusters_merged = await merge_clusters_by_embedding(
+            clusters_merged,
+            self.settings,
+            max_span_hours=float(self.settings.cluster_merge_hours),
+        )
         clusters_deduped: list[list[PreparedArticle]] = []
         for c in clusters_merged:
             d = self._dedupe_within_cluster(c)
-            if d:
+            if d and self._cluster_passes_editorial(d):
                 clusters_deduped.append(d)
-        ordered_clusters = self._order_clusters_for_publish(clusters_deduped)
-        self._log_cluster_overview(ordered_clusters)
+        eligible_n = len(self._eligible_clusters_after_novelty(clusters_deduped))
+        top_scored = self._select_top_importance_clusters(clusters_deduped)
+        stats.skipped_summarize_cap = max(0, eligible_n - len(top_scored))
+        clusters_to_summarize = [c for _, c in top_scored]
+        for i, (score, cluster) in enumerate(top_scored, start=1):
+            primary = self._pick_primary_article(cluster)
+            logger.info(
+                "summarize pick[%d] importance=%d cluster_size=%d title=%s",
+                i,
+                score,
+                len(cluster),
+                primary.title[:100],
+            )
+        self._log_cluster_overview(clusters_to_summarize)
 
-        publish_limit = self.settings.max_publish_per_run
-        if publish_to_wechat:
-            publish_limit = self._remaining_daily_publish_slots()
-            if publish_limit <= 0:
-                logger.info("daily publish cap reached, skip wechat push in this run")
-                await self._run_mandatory_event_enhancement_post_pipeline()
-                return stats
-        for cluster in ordered_clusters[:publish_limit]:
+        seed_limit = len(clusters_to_summarize)
+        store_lock = asyncio.Lock()
+
+        async def _seed_cluster(cluster: list[PreparedArticle]) -> dict[str, str | int]:
+            delta: dict[str, str | int] = {"event_id": "", "failed": 0}
             try:
                 deduped = cluster
                 primary = self._pick_primary_article(deduped)
-                cluster_payload = [
-                    {"title": x.title, "text": x.text[:8000], "source_host": x.source_host} for x in deduped
+                event_id = str(uuid4())
+                dom_key = self._dominant_topic_key_for_cluster(deduped)
+                unique_hosts = {p.source_host for p in deduped if p.source_host}
+                topic_src = len(unique_hosts)
+                now_iso = datetime.now(timezone.utc).isoformat()
+                from event_enhancement.gdelt.query import format_english_event_title
+                from event_enhancement.lang_detect import detect_event_expansion_lang
+
+                exp_cfg = self._expansion_config()
+                member_lang_rows = [
+                    {"title": p.title, "extracted_text": p.text[:800]}
+                    for p in deduped
                 ]
+                event_lang = detect_event_expansion_lang(
+                    event_title=primary.title,
+                    member_articles=member_lang_rows,
+                    cjk_threshold=float(exp_cfg.expansion_event_lang_cjk_ratio),
+                )
+                if event_lang == "en":
+                    other_titles = [p.title for p in deduped if p is not primary]
+                    event_title = format_english_event_title(
+                        primary.title,
+                        other_titles,
+                        max_words=int(exp_cfg.gdelt_event_title_max_words_en),
+                    )
+                else:
+                    event_title = primary.title
+                async with store_lock:
+                    for p in deduped:
+                        self.store.add(
+                            ArticleRecord(
+                                id=str(uuid4()),
+                                title=p.title,
+                                source_url=p.hit.url,
+                                source_published_at=p.source_published_at,
+                                source_published_at_date_only=p.source_published_at_date_only,
+                                extracted_text=p.text,
+                                summary="",
+                                status="pending_summary",
+                                created_at=now_iso,
+                                published_at="",
+                                resolved_url=p.final_url,
+                                source_host=p.source_host,
+                                topic_key=dom_key or p.topic_key,
+                                topic_category=p.topic_category,
+                                topic_is_important=p.topic_is_important,
+                                topic_source_count=topic_src,
+                                deepseek_semantic_decision=p.deepseek_semantic_decision,
+                                novelty_passed=p.novelty_passed,
+                                wechat_draft_pushed_at="",
+                                cluster_size=len(deduped),
+                                synthesis_multi_source=len(deduped) > 1,
+                                event_id=event_id,
+                                summary_zh="",
+                            )
+                        )
+                    self.store.append_event(
+                        EventRecord(
+                            id=event_id,
+                            title=event_title,
+                            summary="",
+                            summary_zh="",
+                            dominant_topic_key=dom_key or primary.topic_key,
+                            created_at=now_iso,
+                        )
+                    )
+                    self.store.append_event_article_map(
+                        [
+                            {
+                                "event_id": event_id,
+                                "source_url": p.hit.url,
+                                "resolved_url": p.final_url or "",
+                                "role": "primary" if p is primary else "source",
+                            }
+                            for p in deduped
+                        ]
+                    )
+                logger.info(
+                    "event seeded (summary after expansion): event_id=%s members=%d title=%s",
+                    event_id[:13],
+                    len(deduped),
+                    primary.title[:80],
+                )
+                delta["event_id"] = event_id
+            except Exception:
+                logger.exception(
+                    "seed event failed: cluster primary=%s",
+                    cluster[0].hit.url if cluster else "",
+                )
+                delta["failed"] = 1
+            return delta
+
+        seed_deltas = await asyncio.gather(
+            *[_seed_cluster(c) for c in clusters_to_summarize[:seed_limit]]
+        )
+        run_event_ids = [str(d["event_id"]) for d in seed_deltas if d.get("event_id")]
+        stats.failed += sum(int(d.get("failed", 0)) for d in seed_deltas)
+
+        await self._run_mandatory_event_enhancement_post_pipeline()
+
+        finalize_stats = await self._finalize_event_summaries_and_publish(
+            run_event_ids,
+            publish_to_wechat=publish_to_wechat,
+        )
+        stats.skipped_summary_fallback += finalize_stats.get("skipped_summary_fallback", 0)
+        stats.skipped_too_short += finalize_stats.get("skipped_too_short", 0)
+        stats.skipped_policy += finalize_stats.get("skipped_policy", 0)
+        stats.skipped_qa += finalize_stats.get("skipped_qa", 0)
+        stats.skipped_insufficient_articles += finalize_stats.get(
+            "skipped_insufficient_articles", 0
+        )
+        stats.published += finalize_stats.get("published", 0)
+        stats.staged_for_review += finalize_stats.get("staged_for_review", 0)
+        stats.failed += finalize_stats.get("failed", 0)
+        return stats
+
+    async def _resolve_wechat_thumb(self) -> str:
+        thumb = self.settings.wechat_mp_thumb_media_id.strip()
+        if thumb:
+            return thumb
+        return await self.wechat.upload_local_cover(self.settings.wechat_mp_thumb_local_path)
+
+    @staticmethod
+    def _pick_primary_article_row(event_id: str, rows: list[dict], url_roles: dict[str, str]) -> dict | None:
+        if not rows:
+            return None
+        for row in rows:
+            url = str(row.get("resolved_url") or row.get("source_url") or "").strip()
+            if url_roles.get(url) == "primary":
+                return row
+        for row in rows:
+            if str(row.get("status") or "").strip() == "pending_summary":
+                return row
+        return rows[0]
+
+    @staticmethod
+    def _articles_for_event_summary(rows: list[dict], *, min_text_chars: int = 200) -> list[dict]:
+        out: list[dict] = []
+        for row in rows:
+            if not isinstance(row, dict):
+                continue
+            text = str(row.get("extracted_text") or "").strip()
+            if len(text) < min_text_chars:
+                continue
+            if text.startswith("【事件增强"):
+                continue
+            out.append(row)
+        return out
+
+    async def _finalize_event_summaries_and_publish(
+        self,
+        event_ids: list[str],
+        *,
+        publish_to_wechat: bool,
+    ) -> dict[str, int]:
+        """扩搜完成后，按事件多源正文重写摘要 → QA →（可选）推微信草稿箱。"""
+        exp_cfg = self._expansion_config()
+        min_articles = max(1, int(exp_cfg.min_articles_for_summary))
+        stats = {
+            "skipped_summary_fallback": 0,
+            "skipped_too_short": 0,
+            "skipped_policy": 0,
+            "skipped_qa": 0,
+            "skipped_insufficient_articles": 0,
+            "published": 0,
+            "staged_for_review": 0,
+            "failed": 0,
+        }
+        if not event_ids:
+            return stats
+
+        min_chars = int(self.settings.cluster_summary_min_chars)
+        max_chars = int(self.settings.cluster_summary_max_chars)
+        publish_slots = self._remaining_daily_publish_slots() if publish_to_wechat else 0
+        if publish_to_wechat and publish_slots <= 0:
+            logger.info("daily publish cap reached; will summarize without wechat push")
+            publish_to_wechat = False
+
+        url_roles_by_event: dict[str, dict[str, str]] = {}
+        for m in self.store._read_event_map():
+            if not isinstance(m, dict):
+                continue
+            eid = str(m.get("event_id") or "").strip()
+            if not eid:
+                continue
+            url = str(m.get("resolved_url") or m.get("source_url") or "").strip()
+            if url:
+                url_roles_by_event.setdefault(eid, {})[url] = str(m.get("role") or "").strip().lower()
+
+        cluster_conc = (
+            1 if publish_to_wechat else max(1, int(self.settings.deepseek_cluster_concurrency))
+        )
+        sem = asyncio.Semaphore(cluster_conc)
+        thumb_default = ""
+        published_this_run = 0
+
+        async def _one(event_id: str) -> None:
+            nonlocal thumb_default, published_this_run
+            async with sem:
+                members = self.store.articles_for_event(event_id)
+                usable = self._articles_for_event_summary(members)
+                logger.info(
+                    "rewrite summary: event=%s total_articles=%d usable=%d",
+                    event_id[:13],
+                    len(members),
+                    len(usable),
+                )
+                if not usable:
+                    stats["failed"] += 1
+                    return
+                if len(usable) < min_articles:
+                    stats["skipped_insufficient_articles"] += 1
+                    logger.info(
+                        "skip summary after expansion: event=%s usable=%d need>=%d",
+                        event_id[:13],
+                        len(usable),
+                        min_articles,
+                    )
+                    return
+                primary = self._pick_primary_article_row(
+                    event_id,
+                    usable,
+                    url_roles_by_event.get(event_id, {}),
+                )
+                if not primary:
+                    stats["failed"] += 1
+                    return
+                payload = build_cluster_summary_items(
+                    usable,
+                    max_sources=int(self.settings.cluster_summary_max_sources),
+                    excerpt_chars=int(self.settings.cluster_summary_excerpt_chars),
+                    url_roles=url_roles_by_event.get(event_id, {}),
+                )
+                if not payload:
+                    stats["failed"] += 1
+                    return
                 draft_title, summary = await self.summarizer.summarize_cluster(
-                    items=cluster_payload,
-                    max_chars=2200,
-                    min_chars=400,
+                    items=payload,
+                    max_chars=max_chars,
+                    min_chars=min_chars,
                 )
                 if not (draft_title or "").strip():
-                    draft_title = primary.title
+                    draft_title = str(primary.get("title") or "")
                 if (summary or "").lstrip().startswith("【摘要】"):
-                    stats.skipped_summary_fallback += 1
-                    logger.info("skip fallback summary (not strict deepseek output): %s", primary.hit.url)
-                    continue
-                if self._is_too_short(summary, min_chars=400):
-                    stats.skipped_too_short += 1
-                    logger.info("skip summary shorter than 400 chars: %s", primary.hit.url)
-                    continue
-                summary_zh = ""
+                    stats["skipped_summary_fallback"] += 1
+                    return
+                if self._is_summary_too_short(summary, min_chars=min_chars):
+                    stats["skipped_too_short"] += 1
+                    logger.info(
+                        "skip summary too short: event=%s chars=%d need>=%d",
+                        event_id[:13],
+                        summary_visible_char_count(summary),
+                        min_chars,
+                    )
+                    return
                 display_title = draft_title
                 display_summary = summary
+                summary_zh = ""
                 if self.settings.event_translate_summary_enabled:
                     tzh, szh = await self.summarizer.translate_title_summary_to_zh(
                         title=draft_title,
@@ -774,128 +1145,94 @@ class PipelineRunner:
                     if szh:
                         display_summary = szh
                         summary_zh = szh
-                combined_text = "\n\n".join(p.text[:3000] for p in deduped)
-                dom_key = self._dominant_topic_key_for_cluster(deduped)
+                combined_text = "\n\n".join(
+                    str(a.get("extracted_text") or "")[:3000] for a in usable
+                )
+                source_url = str(primary.get("resolved_url") or primary.get("source_url") or "")
                 if not self._passes_scope_gate(
                     title=display_title,
                     text=f"{combined_text[:1800]}\n{display_summary[:1000]}",
                     snippet="",
-                    source_url=primary.final_url or primary.hit.url,
+                    source_url=source_url,
                 ):
-                    stats.skipped_policy += 1
-                    logger.info("skip by pre-push scope recheck: %s", primary.hit.url)
-                    continue
+                    stats["skipped_policy"] += 1
+                    return
                 qa = await self.summarizer.review_summary_for_publish(
                     title=display_title,
-                    source_url=primary.final_url or primary.hit.url,
-                    source_published_at=primary.source_published_at,
+                    source_url=source_url,
+                    source_published_at=str(primary.get("source_published_at") or ""),
                     source_text=combined_text,
                     summary=display_summary,
                     max_article_age_hours=self.settings.max_article_age_hours,
                     min_score=self.settings.summary_qa_min_score,
+                    min_summary_chars=min_chars,
                     enabled=self.settings.summary_qa_enabled,
-                    source_published_at_date_only=primary.source_published_at_date_only,
+                    source_published_at_date_only=bool(primary.get("source_published_at_date_only")),
                     date_only_max_calendar_age_days=self.settings.date_only_max_calendar_age_days,
                     schedule_timezone=self.settings.schedule_timezone,
                 )
                 if not qa.get("pass", False):
-                    stats.skipped_qa += 1
+                    stats["skipped_qa"] += 1
                     logger.info(
-                        "skip by deepseek qa: url=%s score=%s hard_fails=%s verdict=%s",
-                        primary.hit.url,
+                        "skip by deepseek qa after expansion: event=%s score=%s hard_fails=%s",
+                        event_id[:13],
                         qa.get("score", 0),
                         qa.get("hard_fail_items", []),
-                        qa.get("quick_verdict", ""),
                     )
-                    continue
-                event_id = str(uuid4())
+                    return
+
                 status = "ready_for_review"
                 published_at = ""
                 wechat_draft_pushed_at = ""
-                if publish_to_wechat:
-                    thumb_media_id = thumb
-                    if primary.first_image_url:
+                if publish_to_wechat and published_this_run < publish_slots:
+                    if not thumb_default:
                         try:
-                            thumb_media_id = await self.wechat.upload_cover_from_url(primary.first_image_url)
+                            thumb_default = await self._resolve_wechat_thumb()
                         except Exception as exc:
-                            logger.warning(
-                                "first image cover upload failed, fallback to default thumb: %s err=%s",
-                                primary.first_image_url,
-                                exc,
-                            )
-                    else:
-                        logger.info(
-                            "no valid first-image candidate found, fallback to default thumb: %s",
-                            primary.hit.url,
-                        )
+                            logger.error("wechat thumb/token failed at publish: %s", exc)
+                            stats["failed"] += 1
+                            return
+                    thumb_media_id = thumb_default
                     await self._push_draft(
                         title=display_title,
                         summary=display_summary,
-                        source_url=primary.hit.url,
+                        source_url=str(primary.get("source_url") or source_url),
                         thumb_media_id=thumb_media_id,
-                        default_thumb=thumb,
+                        default_thumb=thumb_default,
                     )
                     status = "published"
                     published_at = datetime.now(timezone.utc).isoformat()
                     wechat_draft_pushed_at = published_at
-                unique_hosts = {p.source_host for p in deduped if p.source_host}
-                topic_src = len(unique_hosts)
-                rec = ArticleRecord(
-                    id=str(uuid4()),
-                    title=display_title,
-                    source_url=primary.hit.url,
-                    source_published_at=primary.source_published_at,
-                    source_published_at_date_only=primary.source_published_at_date_only,
-                    extracted_text=primary.text,
-                    summary=display_summary,
-                    status=status,
-                    created_at=datetime.now(timezone.utc).isoformat(),
-                    published_at=published_at,
-                    resolved_url=primary.final_url,
-                    source_host=primary.source_host,
-                    topic_key=dom_key or primary.topic_key,
-                    topic_category=primary.topic_category,
-                    topic_is_important=any(p.topic_is_important for p in deduped),
-                    topic_source_count=topic_src,
-                    deepseek_semantic_decision=primary.deepseek_semantic_decision,
-                    novelty_passed=any(p.novelty_passed for p in deduped),
-                    wechat_draft_pushed_at=wechat_draft_pushed_at,
-                    cluster_size=len(deduped),
-                    synthesis_multi_source=len(deduped) > 1,
-                    event_id=event_id,
-                    summary_zh=summary_zh,
-                )
-                self.store.add(rec)
-                self.store.append_event(
-                    EventRecord(
-                        id=event_id,
-                        title=draft_title,
-                        summary=summary,
-                        summary_zh=summary_zh,
-                        dominant_topic_key=dom_key or primary.topic_key,
-                        created_at=datetime.now(timezone.utc).isoformat(),
-                    )
-                )
-                self.store.append_event_article_map(
-                    [
-                        {
-                            "event_id": event_id,
-                            "source_url": p.hit.url,
-                            "resolved_url": p.final_url or "",
-                            "role": "primary" if p is primary else "source",
-                        }
-                        for p in deduped
-                    ]
-                )
-                if publish_to_wechat:
-                    stats.published += 1
+                    published_this_run += 1
+                    stats["published"] += 1
                 else:
-                    stats.staged_for_review += 1
-            except Exception:
-                logger.exception("发布失败: cluster primary=%s", cluster[0].hit.url if cluster else "")
-                stats.failed += 1
+                    stats["staged_for_review"] += 1
 
-        await self._run_mandatory_event_enhancement_post_pipeline()
+                primary_id = str(primary.get("id") or "")
+                self.store.patch_event(
+                    event_id,
+                    {
+                        "title": draft_title,
+                        "summary": summary,
+                        "summary_zh": summary_zh,
+                    },
+                )
+                if primary_id:
+                    self.store.patch_article(
+                        primary_id,
+                        {
+                            "title": display_title,
+                            "summary": display_summary,
+                            "summary_zh": summary_zh,
+                            "status": status,
+                            "published_at": published_at,
+                            "wechat_draft_pushed_at": wechat_draft_pushed_at,
+                        },
+                    )
+                if wechat_draft_pushed_at:
+                    self._clear_body_after_wechat_draft(event_id=event_id)
+
+        await asyncio.gather(*[_one(eid) for eid in event_ids])
         return stats
 
     def clean_library_strict(self) -> LibraryCleanStats:
@@ -1030,6 +1367,7 @@ class PipelineRunner:
         else:
             candidates = candidates[: min(self.settings.max_publish_per_run, remaining_slots)]
         stats.eligible = len(candidates)
+        min_summary_chars = int(self.settings.cluster_summary_min_chars)
 
         for row in candidates:
             aid = str(row.get("id") or "")
@@ -1038,6 +1376,15 @@ class PipelineRunner:
             source_url = (row.get("source_url") or "").strip()
             extracted_text = (row.get("extracted_text") or "").strip()
             source_published_at = str(row.get("source_published_at") or "").strip()
+            if self._is_summary_too_short(summary, min_chars=min_summary_chars):
+                stats.skipped_too_short += 1
+                logger.info(
+                    "push-today-drafts skip too short: id=%s chars=%d need>=%d",
+                    aid,
+                    summary_visible_char_count(summary),
+                    min_summary_chars,
+                )
+                continue
             if not self._passes_scope_gate(
                 title=title,
                 text=f"{extracted_text[:1800]}\n{summary[:1000]}",
@@ -1055,6 +1402,7 @@ class PipelineRunner:
                 summary=summary,
                 max_article_age_hours=self.settings.max_article_age_hours,
                 min_score=self.settings.summary_qa_min_score,
+                min_summary_chars=min_summary_chars,
                 enabled=self.settings.summary_qa_enabled,
                 source_published_at_date_only=bool(row.get("source_published_at_date_only")),
                 date_only_max_calendar_age_days=self.settings.date_only_max_calendar_age_days,
@@ -1096,6 +1444,7 @@ class PipelineRunner:
                 pushed_at = datetime.now(timezone.utc).isoformat()
                 if aid:
                     self.store.patch_article(aid, {"wechat_draft_pushed_at": pushed_at})
+                    self._clear_body_after_wechat_draft(article_id=aid)
                 stats.pushed += 1
                 logger.info("push-today-drafts: pushed id=%s title=%s", aid, title[:40])
             except Exception:
@@ -1122,6 +1471,26 @@ class PipelineRunner:
             if pushed_at.astimezone(tz).date() == today:
                 pushed_today += 1
         return max(0, cap - pushed_today)
+
+    def _clear_body_after_wechat_draft(
+        self, *, event_id: str | None = None, article_id: str | None = None
+    ) -> None:
+        """摘要已进草稿箱后丢弃本地正文，仅保留 summary（可配置关闭）。"""
+        if not self.settings.strip_extracted_text_after_wechat_draft:
+            return
+        eid = (event_id or "").strip()
+        aid = (article_id or "").strip()
+        if eid:
+            n = self.store.clear_extracted_text_for_event(eid)
+            if n:
+                logger.info(
+                    "strip extracted_text after wechat draft: event=%s cleared=%d",
+                    eid[:13],
+                    n,
+                )
+            return
+        if aid and self.store.clear_extracted_text_for_article(aid):
+            logger.info("strip extracted_text after wechat draft: article=%s", aid[:13])
 
     async def _push_draft(
         self,
@@ -1167,6 +1536,24 @@ class PipelineRunner:
         except Exception:
             return None
 
+    _FULL_PUBLISH_TEXT_RE = re.compile(
+        r"(20\d{2}[-/年\.]\d{1,2}[-/月\.]\d{1,2}(?:日)?(?:\s+\d{1,2}:\d{2}(?::\d{2})?)?)",
+    )
+
+    @classmethod
+    def _prefer_publish_datetime_text(cls, texts: list[str]) -> str:
+        """从多个时间文本中优先选取含完整年月日的发布时间。"""
+        cleaned = [(t or "").strip() for t in texts if (t or "").strip()]
+        if not cleaned:
+            return ""
+        for t in cleaned:
+            if cls._FULL_PUBLISH_TEXT_RE.search(t):
+                return t
+        for t in cleaned:
+            if re.search(r"20\d{2}", t):
+                return t
+        return cleaned[0]
+
     @staticmethod
     def _parse_published_raw_to_utc(raw: object) -> tuple[str, bool]:
         """解析单条时间候选为 UTC ISO；第二项为 True 表示仅日历日精度（用日历窗而非小时窗）。"""
@@ -1204,6 +1591,15 @@ class PipelineRunner:
             try:
                 y, mo, d = int(m_dt.group(1)), int(m_dt.group(2)), int(m_dt.group(3))
                 hh, mi, ss = int(m_dt.group(4)), int(m_dt.group(5)), int(m_dt.group(6) or 0)
+                dt = datetime(y, mo, d, hh, mi, ss, tzinfo=sh)
+                return dt.astimezone(timezone.utc).isoformat(), False
+            except Exception:
+                pass
+        m_dot = re.search(r"(20\d{2})\.(\d{1,2})\.(\d{1,2})\s+(\d{1,2}):(\d{2})(?::(\d{2}))?", s)
+        if m_dot:
+            try:
+                y, mo, d = int(m_dot.group(1)), int(m_dot.group(2)), int(m_dot.group(3))
+                hh, mi, ss = int(m_dot.group(4)), int(m_dot.group(5)), int(m_dot.group(6) or 0)
                 dt = datetime(y, mo, d, hh, mi, ss, tzinfo=sh)
                 return dt.astimezone(timezone.utc).isoformat(), False
             except Exception:
@@ -1426,11 +1822,13 @@ class PipelineRunner:
         host = (urlparse(page_url).hostname or "").lower()
         for sel in self._selectors_for_host(host):
             try:
-                node = soup.select_one(sel)
+                nodes = soup.select(sel)
             except Exception:
                 continue
-            if node:
-                txt = node.get_text(" ", strip=True)
+            if nodes:
+                txt = self._prefer_publish_datetime_text(
+                    [n.get_text(" ", strip=True) for n in nodes if n]
+                )
                 if txt and re.search(r"20\d{2}", txt):
                     candidates.append(txt)
         for sel in ("span.item-time", ".article-title-icon span.item-time", "span.title-icon-item.item-time"):
@@ -1439,13 +1837,28 @@ class PipelineRunner:
                 txt = node.get_text(" ", strip=True)
                 if txt:
                     candidates.append(txt)
-        for sel in ("div.time", ".time", ".pages-date", ".pubtime", "span.pub-time"):
-            node = soup.select_one(sel)
-            if not node:
+        for sel in (
+            ".section-article .time",
+            ".article-detail .time",
+            ".post_left .time",
+            "div.time",
+            ".time",
+            ".pages-date",
+            ".pubtime",
+            "span.pub-time",
+        ):
+            try:
+                nodes = soup.select(sel)
+            except Exception:
                 continue
-            txt = node.get_text(" ", strip=True)
+            if not nodes:
+                continue
+            txt = self._prefer_publish_datetime_text(
+                [n.get_text(" ", strip=True) for n in nodes if n]
+            )
             if txt and re.search(r"20\d{2}", txt):
                 candidates.append(txt)
+                break
         for node in soup.select("div.node__content > div.mb-4, .node__content > div.mb-4"):
             txt = node.get_text(" ", strip=True)
             if not txt or len(txt) > 120:
@@ -1919,6 +2332,10 @@ class PipelineRunner:
     def _is_too_short(text: str, min_chars: int = 100) -> bool:
         plain = re.sub(r"\s+", "", text or "")
         return len(plain) < min_chars
+
+    @staticmethod
+    def _is_summary_too_short(summary: str, min_chars: int = 800) -> bool:
+        return summary_visible_char_count(summary) < min_chars
 
     @staticmethod
     def _is_policy_blocked(*, title: str, text: str, source_url: str) -> bool:

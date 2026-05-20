@@ -140,6 +140,119 @@
     ]
   },
   {
+    "id": "cn_36kr_list_002",
+    "name": "36氪-硬科技",
+    "kind": "web",
+    "source_type": "tech_media",
+    "region": "CN",
+    "language": "zh",
+    "value": "36kr.com",
+    "ingest_mode": "html_list",
+    "list_monitor_url": "https://36kr.com/information/web_news/",
+    "published_at_css": [
+      "span.item-time",
+      ".article-title-sub span.item-time"
+    ],
+    "importance_score": 78,
+    "tags": [
+      "科技",
+      "硬科技",
+      "低空经济"
+    ]
+  },
+  {
+    "id": "cn_tmtpost_001",
+    "name": "钛媒体",
+    "kind": "web",
+    "source_type": "tech_media",
+    "region": "CN",
+    "language": "zh",
+    "value": "tmtpost.com",
+    "rss": "https://www.tmtpost.com/rss.xml",
+    "rss_available": true,
+    "ingest_mode": "html_list",
+    "list_monitor_url": "https://www.tmtpost.com/nictation",
+    "published_at_css": [
+      ".section-article .time",
+      ".post_left .time",
+      ".time",
+      "span.time"
+    ],
+    "importance_score": 76,
+    "tags": [
+      "科技",
+      "产业",
+      "无人机"
+    ]
+  },
+  {
+    "id": "cn_huxiu_001",
+    "name": "虎嗅",
+    "kind": "web",
+    "source_type": "tech_media",
+    "region": "CN",
+    "language": "zh",
+    "value": "huxiu.com",
+    "ingest_mode": "html_list",
+    "list_monitor_url": "https://www.huxiu.com/",
+    "published_at_css": [
+      ".article__time",
+      "time[datetime]",
+      ".time"
+    ],
+    "importance_score": 74,
+    "tags": [
+      "科技",
+      "商业"
+    ]
+  },
+  {
+    "id": "cn_jiemian_001",
+    "name": "界面新闻-科技",
+    "kind": "web",
+    "source_type": "financial_media",
+    "region": "CN",
+    "language": "zh",
+    "value": "jiemian.com",
+    "ingest_mode": "html_list",
+    "list_monitor_url": "https://www.jiemian.com/lists/8.html",
+    "published_at_css": [
+      ".article-header time",
+      ".article-info time",
+      ".article-info span",
+      "time[datetime]"
+    ],
+    "importance_score": 77,
+    "tags": [
+      "财经",
+      "科技",
+      "低空经济"
+    ]
+  },
+  {
+    "id": "cn_yicai_001",
+    "name": "第一财经",
+    "kind": "web",
+    "source_type": "financial_media",
+    "region": "CN",
+    "language": "zh",
+    "value": "yicai.com",
+    "ingest_mode": "html_list",
+    "list_monitor_url": "https://www.yicai.com/",
+    "published_at_css": [
+      ".tile-time",
+      ".news-date",
+      "time[datetime]",
+      ".time"
+    ],
+    "importance_score": 80,
+    "tags": [
+      "财经",
+      "产业",
+      "低空经济"
+    ]
+  },
+  {
     "id": "us_faa_001",
     "name": "FAA",
     "kind": "web",
@@ -287,22 +400,6 @@
     "tags": [
       "DJI",
       "Drone"
-    ]
-  },
-  {
-    "id": "company_ehang_001",
-    "name": "亿航智能",
-    "kind": "web",
-    "source_type": "company",
-    "region": "CN",
-    "language": "en",
-    "value": "ehang.com",
-    "ingest_mode": "html_list",
-    "list_monitor_url": "https://ir.ehang.com/news-releases/",
-    "importance_score": 90,
-    "tags": [
-      "eVTOL",
-      "飞行汽车"
     ]
   }
 ]

@@ -35,7 +35,8 @@ flowchart TB
 | `news_single_system.md` | 单篇摘要等调用的 **system** 短句 | 无 |
 | `news_single_summary.md` | 单篇摘要 **user** 体例长文（含材料前的写作规范） | `{{MAX_CHARS}}` |
 | `cluster_summary_system.md` | 多源簇摘要 JSON 调用的 **system** | 无 |
-| `cluster_summary_user.md` | 多源簇摘要 **user** 模板 | `{{MAX_CHARS}}`、`{{MIN_CHARS}}`、`{{BUNDLE}}` |
+| `cluster_summary_user.md` | 多源簇摘要 **user** 模板 | `{{MAX_CHARS}}`、`{{MIN_CHARS}}`、`{{BUNDLE}}`、`{{EDITORIAL_RULES}}` |
+| `summary_editorial_rules.md` | 簇摘要/单篇共用编辑规则（可读性、高亮、国内参照、时间轴） | 由代码注入 `{{EDITORIAL_RULES}}` 或拼入单篇 prompt |
 | `event_press_system.md` | 事件通稿 `event_press_zh` 的 **system** | 无 |
 | `event_press_user.md` | 事件通稿 **user** 模板 | `{event_title}`、`{keywords}`、`{articles}`（Python `str.format`） |
 | `qa_review_system.md` | 发布前摘要 QA 的 **system** 短句 | 无 |

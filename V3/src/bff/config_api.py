@@ -67,5 +67,10 @@ def get_keywords() -> dict[str, Any]:
 def put_keywords(data: dict[str, Any]) -> dict[str, Any]:
     if not isinstance(data, dict):
         raise ValueError("body must be a JSON object")
-    _write_json(_keywords_path(), data)
+    existing = get_keywords()
+    merged = {**existing, **data}
+    for key in ("chinese_keywords", "english_keywords"):
+        if key in data:
+            merged[key] = data[key]
+    _write_json(_keywords_path(), merged)
     return get_keywords()

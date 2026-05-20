@@ -156,7 +156,7 @@ async def _fetch_one_feed(
         return []
 
 
-def _load_feed_rows(settings: Settings) -> list[dict[str, str]]:
+def _load_feed_rows(settings: Settings, *, allow_ids: set[str] | None = None) -> list[dict[str, str]]:
     path = Path((settings.his_data_sources_path or "").strip()).expanduser()
     if not path.is_absolute():
         path = Path.cwd() / path
@@ -180,8 +180,18 @@ def _load_feed_rows(settings: Settings) -> list[dict[str, str]]:
         rss = str(row.get("rss") or "").strip()
         if not rss.startswith("http"):
             continue
+        sid = str(row.get("id") or "").strip()
+        if allow_ids is not None and sid not in allow_ids:
+            continue
         lang = str(row.get("language") or "zh").strip()
-        out.append({"rss": rss, "language": lang, "name": str(row.get("name") or "").strip()})
+        out.append(
+            {
+                "id": sid,
+                "rss": rss,
+                "language": lang,
+                "name": str(row.get("name") or "").strip(),
+            }
+        )
     return out
 
 
@@ -214,7 +224,16 @@ def _load_html_list_rows(settings: Settings) -> list[dict[str, str]]:
             continue
         lang = str(row.get("language") or "zh").strip()
         name = str(row.get("name") or "").strip()
-        out.append({"list_monitor_url": lu, "value": val, "language": lang, "name": name})
+        sid = str(row.get("id") or "").strip()
+        out.append(
+            {
+                "id": sid,
+                "list_monitor_url": lu,
+                "value": val,
+                "language": lang,
+                "name": name,
+            }
+        )
     return out
 
 
@@ -224,6 +243,24 @@ async def aggregate_rss_from_data_sources(settings: Settings) -> list[SearchHit]
         return []
     feed_rows = _load_feed_rows(settings)
     list_rows = _load_html_list_rows(settings)
+    if settings.ingest_zh_html_only:
+        allow_ids = set(settings.parsed_ingest_zh_html_source_ids())
+        if allow_ids:
+            list_rows = [r for r in list_rows if r.get("id") in allow_ids]
+            feed_rows = _load_feed_rows(settings, allow_ids=allow_ids)
+        else:
+            list_rows = [r for r in list_rows if _language_bucket(r.get("language", "zh")) == "zh"]
+            feed_rows = [
+                r
+                for r in _load_feed_rows(settings)
+                if _language_bucket(r.get("language", "zh")) == "zh"
+            ]
+        logger.info(
+            "rss aggregate: zh_html_only mode rss=%d html_list=%d ids=%s",
+            len(feed_rows),
+            len(list_rows),
+            ",".join(sorted(allow_ids)) if allow_ids else "(all_zh)",
+        )
     if not feed_rows and not list_rows:
         logger.info("rss aggregate: no rss or html_list sources in data_sources")
         return []
@@ -253,7 +290,8 @@ async def aggregate_rss_from_data_sources(settings: Settings) -> list[SearchHit]
         bucket = _language_bucket(row.get("language", "zh"))
         kws = zh_kw if bucket == "zh" else en_kw
         eff_filter = relevance and bool(kws)
-        list_timeout = httpx.Timeout(max(timeout, 60.0), connect=min(20.0, max(timeout, 60.0)))
+        list_cap = float(settings.html_list_timeout_sec)
+        list_timeout = httpx.Timeout(list_cap, connect=min(20.0, list_cap))
         async with sem:
             async with httpx.AsyncClient(timeout=list_timeout, follow_redirects=True) as client:
                 return await fetch_html_list_hits(

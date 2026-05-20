@@ -1,41 +1,182 @@
 "use client";
 
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { motion } from "framer-motion";
-import { ArrowLeft, ExternalLink } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
+import {
+  ArrowLeft,
+  ExternalLink,
+  Loader2,
+  Pencil,
+  Save,
+  Send,
+  X,
+} from "lucide-react";
 import { useEvent } from "@/hooks/use-events";
-import { useEventDetailStore } from "@/store/event-detail";
 import { EventDetailSkeleton } from "./event-detail-skeleton";
 import { ImportanceBadge } from "@/components/events/importance-badge";
 import { QAScoreRing } from "@/components/events/qa-score-ring";
 import { Badge } from "@/components/ui/badge";
 import { CardStatic } from "@/components/ui/card";
-import { cn, formatDate, riskColor } from "@/lib/utils";
-import type { EventIntelligence, GroundingSpan } from "@/types/event";
+import { pressBodyForPublish } from "@/lib/press-text";
+import { cn, formatDate } from "@/lib/utils";
+import type { EventIntelligence, GroundingSpan, SourceArticle } from "@/types/event";
+
+const ARTICLE_BOX_HEIGHT = "min(58vh, 560px)";
+const SUPPLEMENTAL_BOX_HEIGHT = "min(32vh, 300px)";
+
+function articleHref(url: string): string {
+  const u = (url || "").trim();
+  if (!u) return "#";
+  if (u.startsWith("http://") || u.startsWith("https://")) return u;
+  return `https://${u.replace(/^\/+/, "")}`;
+}
+
+type RefSegment = {
+  index: number;
+  text: string;
+  sources: SourceArticle[];
+};
+
+function segmentsFromPress(
+  press: string,
+  grounding: GroundingSpan[],
+): RefSegment[] {
+  const parts = press
+    .split(/\n\s*\n/)
+    .map((p) => p.trim())
+    .filter(Boolean);
+  if (!parts.length) return [{ index: 0, text: "", sources: [] }];
+  return parts.map((text, i) => ({
+    index: i,
+    text,
+    sources: grounding[i]?.sources?.length
+      ? (grounding[i].sources as SourceArticle[])
+      : [],
+  }));
+}
+
+function groupArticles(articles: SourceArticle[]) {
+  const seed = articles.filter((a) => a.sourceKind === "seed");
+  const supplemental = articles
+    .filter((a) => a.sourceKind !== "seed")
+    .sort((a, b) => (b.similarity ?? 0) - (a.similarity ?? 0));
+  return { seed, supplemental };
+}
+
+function similarityPercent(sim: number | undefined): number {
+  const v = sim ?? 0;
+  return v > 1 ? Math.round(v) : Math.round(v * 100);
+}
 
 export function EventDetailView({ id }: { id: string }) {
-  const { data, isLoading, error } = useEvent(id);
-  const { selectedParagraphId, rightTab, setSelectedParagraphId, setRightTab } =
-    useEventDetailStore();
+  const qc = useQueryClient();
+  const { data, isLoading, error, refetch } = useEvent(id);
+  const [titleDraft, setTitleDraft] = useState("");
+  const [pressDraft, setPressDraft] = useState("");
+  const [isEditing, setIsEditing] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [drawerTitle, setDrawerTitle] = useState("");
+  const [drawerSources, setDrawerSources] = useState<SourceArticle[]>([]);
+  const [saving, setSaving] = useState(false);
+  const [pushing, setPushing] = useState(false);
+  const [actionMsg, setActionMsg] = useState<{ ok: boolean; text: string } | null>(
+    null,
+  );
+
+  const event = data as EventIntelligence | undefined;
+
+  useEffect(() => {
+    if (!event) return;
+    setTitleDraft(event.title || "");
+    setPressDraft(event.summary || "");
+    setIsEditing(false);
+  }, [event?.id, event?.summary, event?.title]);
+
+  const { seed, supplemental } = useMemo(
+    () => groupArticles(event?.articles ?? []),
+    [event?.articles],
+  );
+  const primarySeed = seed[0];
+
+  const segments = useMemo(
+    () => segmentsFromPress(pressDraft, event?.grounding ?? []),
+    [pressDraft, event?.grounding],
+  );
+
+  function openRefs(title: string, sources: SourceArticle[]) {
+    setDrawerTitle(title);
+    setDrawerSources(sources);
+    setDrawerOpen(true);
+  }
 
   if (isLoading) return <EventDetailSkeleton />;
-  if (error || !data)
+  if (error || !event)
     return (
       <CardStatic className="p-8 text-center">
         <p className="text-zinc-400">事件未找到</p>
         <Link href="/events" className="mt-4 inline-block text-sm text-sky-400">
-          返回事件列表
+          返回 Events
         </Link>
       </CardStatic>
     );
 
-  const event = data as EventIntelligence;
-  const selectedGrounding =
-    event.grounding.find((g) => g.paragraphId === selectedParagraphId) ??
-    event.grounding[0];
+  async function savePress() {
+    setSaving(true);
+    setActionMsg(null);
+    try {
+      const res = await fetch(`/api/events/${id}/press`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: titleDraft,
+          summary: pressBodyForPublish(pressDraft),
+        }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error((body as { detail?: string }).detail || "保存失败");
+      setActionMsg({ ok: true, text: "通稿已保存" });
+      setIsEditing(false);
+      await refetch();
+      qc.invalidateQueries({ queryKey: ["events"] });
+    } catch (e) {
+      setActionMsg({
+        ok: false,
+        text: e instanceof Error ? e.message : "保存失败",
+      });
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function pushDraft() {
+    setPushing(true);
+    setActionMsg(null);
+    try {
+      const res = await fetch(`/api/events/${id}/push-draft`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: titleDraft,
+          summary: pressBodyForPublish(pressDraft),
+        }),
+      });
+      const body = (await res.json()) as { detail?: string };
+      if (!res.ok) throw new Error(body.detail || "推送失败");
+      setActionMsg({ ok: true, text: "已写入公众号草稿箱" });
+      await refetch();
+    } catch (e) {
+      setActionMsg({
+        ok: false,
+        text: e instanceof Error ? e.message : "推送失败",
+      });
+    } finally {
+      setPushing(false);
+    }
+  }
 
   return (
-    <div className="space-y-4">
+    <div className="mx-auto max-w-4xl space-y-5">
       <Link
         href="/events"
         className="inline-flex items-center gap-2 text-sm text-zinc-500 hover:text-zinc-300"
@@ -44,316 +185,365 @@ export function EventDetailView({ id }: { id: string }) {
         返回 Events
       </Link>
 
-      <div className="grid gap-4 xl:grid-cols-[260px_1fr_360px]">
-        <EventTimelinePanel event={event} selectedParagraphId={selectedParagraphId} />
-        <CenterPressPanel
-          event={event}
-          selectedParagraphId={selectedParagraphId}
-          onSelectParagraph={setSelectedParagraphId}
-        />
-        <RightIntelPanel
-          event={event}
-          rightTab={rightTab}
-          setRightTab={setRightTab}
-          selectedGrounding={selectedGrounding}
-        />
-      </div>
-    </div>
-  );
-}
-
-function EventTimelinePanel({
-  event,
-  selectedParagraphId,
-}: {
-  event: EventIntelligence;
-  selectedParagraphId: string | null;
-}) {
-  return (
-    <CardStatic className="h-fit max-h-[calc(100vh-12rem)] overflow-y-auto">
-      <h3 className="mb-4 text-xs font-medium uppercase tracking-wider text-zinc-500">
-        Timeline
-      </h3>
-      <div className="relative space-y-0 border-l border-white/10 pl-4">
-        {event.timeline.map((node, i) => (
-          <motion.div
-            key={node.id}
-            initial={{ opacity: 0, x: -8 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: i * 0.05 }}
-            className="relative pb-6 last:pb-0"
-          >
-            <span className="absolute -left-[21px] top-1.5 h-2 w-2 rounded-full bg-sky-500/80 ring-4 ring-[#0a0a0b]" />
-            <p className="text-[10px] text-zinc-600">{formatDate(node.at)}</p>
-            <p className="mt-0.5 text-sm text-zinc-300 line-clamp-2">{node.label}</p>
-            {node.sourceHost && (
-              <p className="text-[10px] text-zinc-600">{node.sourceHost}</p>
-            )}
-          </motion.div>
-        ))}
-      </div>
-    </CardStatic>
-  );
-}
-
-function CenterPressPanel({
-  event,
-  selectedParagraphId,
-  onSelectParagraph,
-}: {
-  event: EventIntelligence;
-  selectedParagraphId: string | null;
-  onSelectParagraph: (id: string) => void;
-}) {
-  return (
-    <div className="space-y-4">
-      <CardStatic>
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="min-w-0 flex-1">
-            <h1 className="text-lg font-semibold leading-snug text-zinc-100">
-              {event.title}
-            </h1>
-            <div className="mt-3 flex flex-wrap gap-2">
-              <ImportanceBadge score={event.importance_score} />
-              {event.countries.map((c) => (
-                <Badge key={c} variant="muted">
-                  {c}
-                </Badge>
-              ))}
-              {event.keywords.slice(0, 5).map((k) => (
-                <Badge key={k} variant="accent">
-                  {k}
-                </Badge>
-              ))}
-            </div>
-          </div>
-          <QAScoreRing score={event.qa_score} />
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <h1 className="min-w-0 flex-1 text-2xl font-semibold leading-snug text-zinc-100">
+          {event.title}
+        </h1>
+        <div className="flex items-center gap-3">
+          <ImportanceBadge score={event.importance_score} />
+          {event.qa_score > 0 && <QAScoreRing score={event.qa_score} />}
         </div>
-      </CardStatic>
-
-      <CardStatic>
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-sm font-medium text-zinc-300">AI 新闻稿</h2>
-          <span className="text-[10px] text-zinc-600">
-            点击段落查看溯源
-          </span>
-        </div>
-        <div className="space-y-3">
-          {event.grounding.map((g, i) => (
-            <motion.button
-              key={g.paragraphId}
-              type="button"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: i * 0.04 }}
-              onClick={() => onSelectParagraph(g.paragraphId)}
-              className={cn(
-                "w-full rounded-lg border px-4 py-3 text-left text-sm leading-relaxed text-zinc-300 transition-all",
-                selectedParagraphId === g.paragraphId
-                  ? "border-sky-500/40 bg-sky-500/5 ring-1 ring-sky-500/20"
-                  : "border-transparent bg-white/[0.02] hover:border-white/10 hover:bg-white/[0.04]",
-              )}
-            >
-              {g.text}
-            </motion.button>
-          ))}
-        </div>
-      </CardStatic>
-
-      <RewriteHistoryPanel history={event.rewrite_history} />
-    </div>
-  );
-}
-
-function RewriteHistoryPanel({
-  history,
-}: {
-  history: EventIntelligence["rewrite_history"];
-}) {
-  return (
-    <CardStatic>
-      <h3 className="mb-3 text-sm font-medium text-zinc-400">Rewrite History</h3>
-      <div className="space-y-2">
-        {history.map((r) => (
-          <details
-            key={r.round}
-            className="rounded-lg border border-white/[0.06] bg-white/[0.02] px-3 py-2"
-          >
-            <summary className="cursor-pointer text-xs text-zinc-400">
-              Round {r.round} · {r.reason} · {formatDate(r.at)}
-            </summary>
-            {r.before && (
-              <p className="mt-2 text-xs text-rose-300/80 line-clamp-3">{r.before}</p>
-            )}
-            <p className="mt-1 text-xs text-emerald-300/80 line-clamp-4">{r.after}</p>
-          </details>
-        ))}
-      </div>
-    </CardStatic>
-  );
-}
-
-function RightIntelPanel({
-  event,
-  rightTab,
-  setRightTab,
-  selectedGrounding,
-}: {
-  event: EventIntelligence;
-  rightTab: "sources" | "qa" | "grounding";
-  setRightTab: (t: "sources" | "qa" | "grounding") => void;
-  selectedGrounding?: GroundingSpan;
-}) {
-  const tabs = [
-    { id: "grounding" as const, label: "溯源" },
-    { id: "sources" as const, label: "来源" },
-    { id: "qa" as const, label: "QA" },
-  ];
-
-  return (
-    <div className="space-y-3">
-      <div className="flex gap-1 rounded-lg border border-white/[0.06] bg-white/[0.02] p-1">
-        {tabs.map((t) => (
-          <button
-            key={t.id}
-            type="button"
-            onClick={() => setRightTab(t.id)}
-            className={cn(
-              "flex-1 rounded-md px-2 py-1.5 text-xs transition-colors",
-              rightTab === t.id
-                ? "bg-white/10 text-zinc-100"
-                : "text-zinc-500 hover:text-zinc-300",
-            )}
-          >
-            {t.label}
-          </button>
-        ))}
       </div>
 
-      {rightTab === "grounding" && (
-        <CardStatic>
-          <h3 className="mb-2 text-sm font-medium text-zinc-300">Source Grounding</h3>
-          <p className="mb-3 text-xs text-zinc-500">
-            这段内容来源于以下 source articles
-          </p>
-          {selectedGrounding ? (
-            <>
-              <p className="mb-3 rounded-md bg-white/[0.03] p-2 text-xs text-zinc-400 line-clamp-4">
-                {selectedGrounding.text}
-              </p>
-              <p className="mb-2 text-[10px] text-zinc-600">
-                置信度 {(selectedGrounding.confidence * 100).toFixed(0)}%
-              </p>
-              <ul className="space-y-2">
-                {selectedGrounding.articleIds.map((aid) => {
-                  const art = event.articles.find((a) => a.id === aid);
-                  if (!art) return null;
-                  return (
-                    <li
-                      key={aid}
-                      className="rounded-lg border border-white/[0.06] p-2 text-xs"
-                    >
-                      <p className="font-medium text-zinc-300">{art.title}</p>
-                      <p className="mt-1 text-zinc-600">{art.sourceHost}</p>
-                    </li>
-                  );
-                })}
-              </ul>
-            </>
-          ) : (
-            <p className="text-xs text-zinc-600">选择左侧通稿段落</p>
-          )}
-        </CardStatic>
+      {primarySeed ? (
+        <SeedBanner article={primarySeed} totalSeeds={seed.length} />
+      ) : (
+        <p className="text-xs text-zinc-600">暂无溯源主稿</p>
       )}
 
-      {rightTab === "sources" && (
-        <CardStatic className="max-h-[calc(100vh-14rem)] overflow-y-auto">
-          <h3 className="mb-3 text-sm font-medium text-zinc-300">Source Articles</h3>
-          <p className="mb-2 text-[10px] text-zinc-600">
-            Domains: {event.sourceDomains?.join(", ")}
-          </p>
-          <ul className="space-y-3">
-            {event.articles.map((a) => (
+      <CardStatic className="flex flex-col gap-0 overflow-hidden p-0">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/[0.06] px-4 py-3">
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setIsEditing((v) => !v)}
+              className={cn(
+                "inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors",
+                isEditing
+                  ? "bg-sky-500 text-white"
+                  : "border border-white/10 text-zinc-300 hover:bg-white/[0.04]",
+              )}
+            >
+              <Pencil className="h-3.5 w-3.5" />
+              {isEditing ? "阅读" : "编辑"}
+            </button>
+            <span className="text-xs text-zinc-600">
+              {isEditing ? "编辑模式" : "阅读模式 · 点击文中〔n〕查看引用"}
+            </span>
+          </div>
+          {event.wechatDraftPushedAt ? (
+            <Badge className="border-emerald-500/30 text-emerald-300">
+              已推草稿 · {formatDate(event.wechatDraftPushedAt)}
+            </Badge>
+          ) : null}
+        </div>
+
+        {isEditing && (
+          <div className="border-b border-white/[0.06] px-4 py-2">
+            <label className="text-[11px] text-zinc-500">推送标题</label>
+            <input
+              value={titleDraft}
+              onChange={(e) => setTitleDraft(e.target.value)}
+              className="input-field mt-1 w-full text-sm"
+            />
+          </div>
+        )}
+
+        <div
+          className="overflow-y-auto px-5 py-4"
+          style={{ height: ARTICLE_BOX_HEIGHT }}
+        >
+          {isEditing ? (
+            <textarea
+              value={pressDraft}
+              onChange={(e) => setPressDraft(e.target.value)}
+              className="input-field h-full min-h-full w-full resize-none border-0 bg-transparent font-sans text-sm leading-[1.85] text-zinc-200 focus:ring-0"
+              style={{ minHeight: ARTICLE_BOX_HEIGHT }}
+            />
+          ) : (
+            <ArticleReader
+              segments={segments}
+              onRefClick={(label, sources) => openRefs(label, sources)}
+            />
+          )}
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3 border-t border-white/[0.06] px-4 py-3">
+          <button
+            type="button"
+            onClick={savePress}
+            disabled={saving || pushing}
+            className="inline-flex items-center gap-2 rounded-lg border border-white/10 px-4 py-2 text-sm text-zinc-300 hover:bg-white/[0.04] disabled:opacity-50"
+          >
+            {saving ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Save className="h-4 w-4" />
+            )}
+            保存通稿
+          </button>
+          <button
+            type="button"
+            onClick={pushDraft}
+            disabled={saving || pushing || !pressDraft.trim()}
+            className="inline-flex items-center gap-2 rounded-lg bg-sky-500 px-4 py-2 text-sm text-white hover:bg-sky-400 disabled:opacity-50"
+          >
+            {pushing ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Send className="h-4 w-4" />
+            )}
+            推送草稿箱
+          </button>
+          {actionMsg && (
+            <p
+              className={cn(
+                "text-sm",
+                actionMsg.ok ? "text-emerald-400" : "text-rose-400",
+              )}
+            >
+              {actionMsg.text}
+            </p>
+          )}
+        </div>
+      </CardStatic>
+
+      {supplemental.length > 0 && (
+        <SupplementalArticlesPanel articles={supplemental} />
+      )}
+
+      <CitationDrawer
+        open={drawerOpen}
+        title={drawerTitle}
+        sources={drawerSources}
+        onClose={() => setDrawerOpen(false)}
+      />
+    </div>
+  );
+}
+
+function SeedBanner({
+  article,
+  totalSeeds,
+}: {
+  article: SourceArticle;
+  totalSeeds: number;
+}) {
+  return (
+    <CardStatic className="px-4 py-3">
+      <p className="text-[11px] font-medium text-sky-300/90">
+        溯源主稿
+        {totalSeeds > 1 ? (
+          <span className="ml-2 font-normal text-zinc-600">
+            展示首篇，共 {totalSeeds} 篇
+          </span>
+        ) : null}
+      </p>
+      <a
+        href={articleHref(article.url)}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="mt-1.5 inline-flex items-start gap-1.5 text-sm text-sky-400 hover:text-sky-300 hover:underline"
+      >
+        <ExternalLink className="mt-1 h-3.5 w-3.5 shrink-0" />
+        <span className="line-clamp-2">{article.title}</span>
+      </a>
+      <p className="mt-1 text-[10px] text-zinc-600">
+        {article.sourceHost}
+        {article.publishedAt ? ` · ${formatDate(article.publishedAt)}` : ""}
+      </p>
+    </CardStatic>
+  );
+}
+
+function SupplementalArticlesPanel({
+  articles,
+}: {
+  articles: SourceArticle[];
+}) {
+  return (
+    <CardStatic className="overflow-hidden p-0">
+      <div className="border-b border-white/[0.06] px-4 py-3">
+        <h2 className="text-sm font-medium text-zinc-300">
+          参考稿（扩搜 / 聚类关联）
+        </h2>
+        <p className="mt-0.5 text-[11px] text-zinc-600">
+          与主稿同源、经不同检索阶段收录，共 {articles.length} 篇 · 下滑查看
+        </p>
+      </div>
+      <div
+        className="overflow-y-auto px-4 py-3"
+        style={{ height: SUPPLEMENTAL_BOX_HEIGHT }}
+      >
+        <ul className="space-y-3">
+          {articles.map((a) => {
+            const pct = similarityPercent(a.similarity);
+            return (
               <li
                 key={a.id}
                 className="rounded-lg border border-white/[0.06] bg-white/[0.02] p-3"
               >
-                <motion.div className="flex items-start justify-between gap-2">
-                  <p className="text-sm text-zinc-300">{a.title}</p>
-                  <a
-                    href={a.url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="shrink-0 text-zinc-500 hover:text-sky-400"
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[10px] text-zinc-500">
+                    {a.sourceKind === "expansion" ? "扩搜" : "聚类关联"}
+                  </span>
+                  <span
+                    className={cn(
+                      "text-[11px] font-medium tabular-nums",
+                      pct >= 75
+                        ? "text-emerald-400"
+                        : pct >= 55
+                          ? "text-amber-400"
+                          : "text-zinc-500",
+                    )}
+                    title="与事件主题的语义相似度"
                   >
-                    <ExternalLink className="h-3.5 w-3.5" />
-                  </a>
-                </motion.div>
-                <div className="mt-2 h-1 overflow-hidden rounded-full bg-white/5">
-                  <motion.div
-                    className="h-full bg-sky-500/60"
-                    initial={{ width: 0 }}
-                    animate={{ width: `${a.similarity * 100}%` }}
+                    相似度 {pct}%
+                  </span>
+                </div>
+                <div
+                  className="mt-1.5 h-1 overflow-hidden rounded-full bg-white/[0.06]"
+                  aria-hidden
+                >
+                  <div
+                    className={cn(
+                      "h-full rounded-full transition-all",
+                      pct >= 75
+                        ? "bg-emerald-500/70"
+                        : pct >= 55
+                          ? "bg-amber-500/60"
+                          : "bg-zinc-600",
+                    )}
+                    style={{ width: `${Math.min(100, pct)}%` }}
                   />
                 </div>
+                <a
+                  href={articleHref(a.url)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-2 inline-flex items-start gap-1.5 text-sm leading-snug text-sky-400 hover:text-sky-300 hover:underline"
+                >
+                  <ExternalLink className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                  {a.title}
+                </a>
                 <p className="mt-1 text-[10px] text-zinc-600">
-                  相似度 {(a.similarity * 100).toFixed(0)}% · {a.sourceHost}
+                  {a.sourceHost}
+                  {a.publishedAt ? ` · ${formatDate(a.publishedAt)}` : ""}
                 </p>
-                <p className="mt-2 text-xs text-zinc-500 line-clamp-2">{a.excerpt}</p>
+                {a.excerpt ? (
+                  <p className="mt-2 line-clamp-3 text-xs leading-relaxed text-zinc-500">
+                    {a.excerpt}
+                  </p>
+                ) : null}
               </li>
-            ))}
-          </ul>
-        </CardStatic>
-      )}
+            );
+          })}
+        </ul>
+      </div>
+    </CardStatic>
+  );
+}
 
-      {rightTab === "qa" && (
-        <CardStatic>
-          <h3 className="mb-3 text-sm font-medium text-zinc-300">QA Review</h3>
-          <div className="space-y-3 text-sm">
-            <div className="flex justify-between">
-              <span className="text-zinc-500">Hallucination risk</span>
-              <span className={riskColor(event.qa.hallucinationRisk)}>
-                {event.qa.hallucinationRisk}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-zinc-500">AI-style risk</span>
-              <span className="text-zinc-300">{event.qa.aiStyleRisk}</span>
-            </div>
-            <motion.div className="flex justify-between">
-              <span className="text-zinc-500">Rewrite triggered</span>
-              <span className="text-zinc-300">
-                {event.qa.rewriteTriggered ? "是" : "否"}
-              </span>
-            </motion.div>
-            {event.qa.missingFacts.length > 0 && (
-              <div>
-                <p className="text-zinc-500">Missing facts</p>
-                <ul className="mt-1 list-inside list-disc text-xs text-amber-400/90">
-                  {event.qa.missingFacts.map((f) => (
-                    <li key={f}>{f}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
-            {event.qa.issues.length > 0 && (
-              <div>
-                <p className="text-zinc-500">Issues</p>
-                <ul className="mt-1 space-y-1">
-                  {event.qa.issues.map((issue, i) => (
-                    <li
-                      key={i}
-                      className="rounded border border-white/[0.06] px-2 py-1 text-xs text-zinc-400"
-                    >
-                      [{issue.severity}] {issue.description}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </div>
-        </CardStatic>
-      )}
-    </div>
+function ArticleReader({
+  segments,
+  onRefClick,
+}: {
+  segments: RefSegment[];
+  onRefClick: (label: string, sources: SourceArticle[]) => void;
+}) {
+  if (!segments.some((s) => s.text)) {
+    return <p className="text-sm text-zinc-500">暂无通稿正文</p>;
+  }
+
+  return (
+    <article className="whitespace-pre-wrap text-sm leading-[1.85] text-zinc-200">
+      {segments.map((seg, i) => (
+        <span key={seg.index}>
+          {seg.text}
+          {seg.sources.length > 0 && (
+            <button
+              type="button"
+              onClick={() =>
+                onRefClick(`第 ${seg.index + 1} 段参考`, seg.sources)
+              }
+              className="mx-0.5 inline align-baseline text-[11px] font-medium text-sky-400 hover:text-sky-300"
+              title="查看本段引用来源"
+            >
+              〔{seg.sources.length}〕
+            </button>
+          )}
+          {i < segments.length - 1 ? "\n\n" : ""}
+        </span>
+      ))}
+    </article>
+  );
+}
+
+function CitationDrawer({
+  open,
+  title,
+  sources,
+  onClose,
+}: {
+  open: boolean;
+  title: string;
+  sources: SourceArticle[];
+  onClose: () => void;
+}) {
+  return (
+    <>
+      <div
+        className={cn(
+          "fixed inset-0 z-40 bg-black/40 transition-opacity",
+          open ? "opacity-100" : "pointer-events-none opacity-0",
+        )}
+        onClick={onClose}
+        aria-hidden={!open}
+      />
+      <aside
+        className={cn(
+          "fixed right-0 top-0 z-50 flex h-full w-full max-w-md flex-col border-l border-white/[0.08] bg-[#0c0c0e] shadow-2xl transition-transform duration-200",
+          open ? "translate-x-0" : "translate-x-full",
+        )}
+        aria-hidden={!open}
+      >
+        <div className="flex items-center justify-between border-b border-white/[0.06] px-4 py-4">
+          <h3 className="text-sm font-medium text-zinc-200">{title}</h3>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg p-1 text-zinc-500 hover:bg-white/[0.06] hover:text-zinc-300"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+        <div className="flex-1 overflow-y-auto px-4 py-4">
+          {sources.length === 0 ? (
+            <p className="text-sm text-zinc-500">暂无引用来源</p>
+          ) : (
+            <ul className="space-y-4">
+              {sources.map((a) => (
+                <li
+                  key={a.id}
+                  className="rounded-lg border border-white/[0.06] bg-white/[0.02] p-3"
+                >
+                  <span className="text-[10px] text-zinc-600">
+                    {a.sourceKind === "seed"
+                      ? "溯源主稿"
+                      : a.sourceKind === "expansion"
+                        ? "扩搜参考"
+                        : "聚类关联"}
+                  </span>
+                  {(a.similarity ?? 0) > 0 && (
+                    <span className="ml-2 text-[10px] text-zinc-500">
+                      相似度 {similarityPercent(a.similarity)}%
+                    </span>
+                  )}
+                  <a
+                    href={articleHref(a.url)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-1 block text-sm leading-snug text-sky-400 hover:text-sky-300 hover:underline"
+                  >
+                    {a.title}
+                  </a>
+                  <p className="mt-1 text-[10px] text-zinc-600">{a.sourceHost}</p>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </aside>
+    </>
   );
 }

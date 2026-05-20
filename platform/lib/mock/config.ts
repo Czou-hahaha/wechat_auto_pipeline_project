@@ -32,12 +32,15 @@ export const MOCK_DATA_SOURCES = [
 export const MOCK_SCHEDULE = {
   enabled: false,
   timezone: "Asia/Shanghai",
-  morning_hour: 8,
-  evening_hour: 20,
-  morning_time: "08:00",
-  evening_time: "20:00",
-  summary: "每日 08:00、20:00（Asia/Shanghai）各执行一次 run-once",
-  restart_hint: "修改后需重启 run-scheduler 进程后生效",
+  jobs: [
+    { id: "job_morning", label: "早间采集", hour: 8, minute: 0 },
+    { id: "job_evening", label: "晚间采集", hour: 20, minute: 0 },
+  ],
+  article_age: { unit: "hours" as const, value: 14 },
+  article_age_limit_enabled: true,
+  article_age_hours: 14,
+  summary:
+    "已配置 2 个定时点（08:00、20:00）；仅采集 近 14 小时 内发布的文章",
 };
 
 export const MOCK_KEYWORDS: Record<string, string[]> = {
@@ -52,9 +55,4 @@ export const MOCK_KEYWORDS: Record<string, string[]> = {
     "无人机",
     "飞行汽车",
   ],
-  national_policy: ["低空经济 政策"],
-  local_policy: ["低空经济 地方"],
-  intl_coopcomp: ["无人机 国际"],
-  frontier_tech: ["eVTOL 技术"],
-  site_core_keywords: ["无人机", "低空经济"],
 };

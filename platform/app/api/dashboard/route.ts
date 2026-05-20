@@ -5,6 +5,8 @@ import type { DashboardData } from "@/types/event";
 
 export async function GET() {
   const bff = await fetchBff<DashboardData>("/api/dashboard");
-  if (bff) return NextResponse.json(bff);
-  return NextResponse.json(mockDashboard());
+  const body = bff ?? mockDashboard();
+  return NextResponse.json(body, {
+    headers: { "Cache-Control": "no-store, max-age=0" },
+  });
 }

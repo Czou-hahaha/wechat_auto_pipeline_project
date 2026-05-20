@@ -1,16 +1,18 @@
-"""Async GDELT DOC client with rate limit, backoff, UA rotation."""
+"""Async GDELT DOC client — delegates to global ``http_core`` rate limit + retry."""
 from __future__ import annotations
 
-import asyncio
-import json
 import logging
-import random
-import re
 from datetime import datetime, timezone
+from pathlib import Path
 
 import httpx
 
 from event_enhancement.config_expansion import ExpansionConfig
+from event_enhancement.gdelt.http_core import (
+    DEFAULT_BACKOFF_SEC,
+    GdeltHttpConfig,
+    fetch_gdelt_doc_json,
+)
 from event_enhancement.gdelt.types import GdeltHit
 from event_enhancement.settings import Settings
 
@@ -57,7 +59,7 @@ def _hits_from_payload(data: object, *, max_results: int) -> list[GdeltHit]:
 
 
 class GdeltAsyncClient:
-    """httpx + semaphore + min-interval + exponential backoff on 429/5xx."""
+    """Serial GDELT access via process-wide rate limiter in ``http_core``."""
 
     def __init__(
         self,
@@ -65,14 +67,31 @@ class GdeltAsyncClient:
         settings: Settings,
         expansion: ExpansionConfig,
         http_client: httpx.AsyncClient,
+        cache_dir: Path | None = None,
     ) -> None:
         self._settings = settings
         self._e = expansion
         self._client = http_client
-        self._sem = asyncio.Semaphore(expansion.gdelt.max_concurrent)
-        self._interval_lock = asyncio.Lock()
-        self._last_request_at: float = 0.0
         self._ua_idx = 0
+        g = expansion.gdelt
+        backoff = tuple(
+            min(float(g.backoff_max_sec), float(g.backoff_base_sec) * (2**i))
+            for i in range(max(1, int(g.max_retries)))
+        )
+        if len(backoff) < 3:
+            backoff = DEFAULT_BACKOFF_SEC
+        self._http_cfg = GdeltHttpConfig(
+            base_url=(settings.gdelt_base_url or "").strip()
+            or "https://api.gdeltproject.org/api/v2/doc/doc",
+            timespan=str(g.timespan or "1h").strip(),
+            max_records=int(g.max_records),
+            timeout_sec=float(expansion.http_fetch_timeout_sec),
+            retry_timeout_sec=float(g.retry_timeout_sec),
+            min_interval_sec=max(5.0, float(g.min_interval_sec)),
+            max_retries=max(1, int(g.max_retries)),
+            backoff_sec=backoff[:3] if len(backoff) >= 3 else DEFAULT_BACKOFF_SEC,
+            cache_dir=cache_dir,
+        )
 
     def _next_ua(self) -> str:
         uas = self._e.user_agents
@@ -81,18 +100,6 @@ class GdeltAsyncClient:
         ua = uas[self._ua_idx % len(uas)]
         self._ua_idx += 1
         return ua
-
-    async def _respect_interval(self) -> None:
-        gap = max(0.0, float(self._e.gdelt.min_interval_sec))
-        if gap <= 0:
-            return
-        async with self._interval_lock:
-            loop = asyncio.get_running_loop()
-            now = loop.time()
-            wait = gap - (now - self._last_request_at)
-            if wait > 0:
-                await asyncio.sleep(wait)
-            self._last_request_at = loop.time()
 
     async def search(
         self,
@@ -103,80 +110,36 @@ class GdeltAsyncClient:
         q = (query or "").strip()
         if not q:
             return []
-        ts = (timespan or self._e.gdelt.timespan).strip()
-        maxrec = max(1, min(int(self._e.gdelt.max_records), 75))
-        root = (self._settings.gdelt_base_url or "").strip() or "https://api.gdeltproject.org/api/v2/doc/doc"
-        params = {
-            "query": q,
-            "mode": "ArtList",
-            "format": "json",
-            "maxrecords": str(maxrec),
-            "timespan": ts,
-            "sort": "datedesc",
-        }
-        attempt = 0
-        base = float(self._e.gdelt.backoff_base_sec)
-        cap = float(self._e.gdelt.backoff_max_sec)
-        jitter = float(self._e.gdelt.jitter_sec)
-        max_retries = int(self._e.gdelt.max_retries)
-
-        async with self._sem:
-            while True:
-                await self._respect_interval()
-                headers = {"User-Agent": self._next_ua()}
-                try:
-                    resp = await self._client.get(root, params=params, headers=headers)
-                except (httpx.HTTPError, OSError) as e:
-                    logger.warning(
-                        "gdelt transport error query_prefix=%s kind=%s",
-                        q[:80],
-                        type(e).__name__,
-                    )
-                    if attempt >= max_retries:
-                        return []
-                    attempt += 1
-                    await self._sleep_backoff(attempt, base, cap, jitter)
-                    continue
-
-                if resp.status_code == 429 or (500 <= resp.status_code < 600):
-                    logger.warning(
-                        "gdelt retryable status=%s query_prefix=%s attempt=%s",
-                        resp.status_code,
-                        q[:80],
-                        attempt,
-                    )
-                    if attempt >= max_retries:
-                        return []
-                    attempt += 1
-                    await self._sleep_backoff(attempt, base, cap, jitter)
-                    continue
-
-                if resp.status_code != 200:
-                    logger.warning("gdelt http status=%s query_prefix=%s", resp.status_code, q[:80])
-                    return []
-
-                text = (resp.text or "").strip()
-                if not text:
-                    logger.warning("gdelt empty body query_prefix=%s", q[:80])
-                    if attempt >= max_retries:
-                        return []
-                    attempt += 1
-                    await self._sleep_backoff(attempt, base, cap, jitter)
-                    continue
-
-                try:
-                    data = json.loads(text)
-                except json.JSONDecodeError:
-                    logger.warning("gdelt invalid json query_prefix=%s", q[:80])
-                    if attempt >= max_retries:
-                        return []
-                    attempt += 1
-                    await self._sleep_backoff(attempt, base, cap, jitter)
-                    continue
-
-                return _hits_from_payload(data, max_results=maxrec)
-
-    async def _sleep_backoff(self, attempt: int, base: float, cap: float, jitter: float) -> None:
-        exp = min(cap, base * (2 ** (attempt - 1)))
-        exp += random.uniform(0.0, max(0.0, jitter))
-        await asyncio.sleep(exp)
+        cfg = self._http_cfg
+        if timespan:
+            cfg = GdeltHttpConfig(
+                base_url=cfg.base_url,
+                timespan=timespan.strip(),
+                max_records=cfg.max_records,
+                timeout_sec=cfg.timeout_sec,
+                retry_timeout_sec=cfg.retry_timeout_sec,
+                min_interval_sec=cfg.min_interval_sec,
+                max_retries=cfg.max_retries,
+                backoff_sec=cfg.backoff_sec,
+                cache_dir=cfg.cache_dir,
+                cache_ttl_sec=cfg.cache_ttl_sec,
+                user_agent=self._next_ua(),
+            )
+        else:
+            cfg = GdeltHttpConfig(
+                base_url=cfg.base_url,
+                timespan=cfg.timespan,
+                max_records=cfg.max_records,
+                timeout_sec=cfg.timeout_sec,
+                retry_timeout_sec=cfg.retry_timeout_sec,
+                min_interval_sec=cfg.min_interval_sec,
+                max_retries=cfg.max_retries,
+                backoff_sec=cfg.backoff_sec,
+                cache_dir=cfg.cache_dir,
+                cache_ttl_sec=cfg.cache_ttl_sec,
+                user_agent=self._next_ua(),
+            )
+        result = await fetch_gdelt_doc_json(self._client, query=q, config=cfg)
+        if result.data is None:
+            return []
+        return _hits_from_payload(result.data, max_results=cfg.max_records)

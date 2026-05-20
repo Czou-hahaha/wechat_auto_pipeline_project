@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from html import escape
+from src.utils.summary_html import summary_plain_for_digest, summary_to_wechat_html_body
 import mimetypes
 from pathlib import Path
 from typing import Any
@@ -82,18 +82,19 @@ class WeChatDraftClient:
         thumb_media_id: str,
     ) -> dict[str, Any]:
         token = await self._token()
-        safe_summary = escape((summary or "").strip(), quote=False).replace("\n", "<br/>")
+        body_html = summary_to_wechat_html_body(summary or "")
         content_html = (
-            f"<p>{safe_summary}</p>"
+            f"{body_html}"
             "<p><br/></p>"
             "<p><strong>引用说明</strong>：本文为基于公开网页内容的摘要整理，仅供信息参考，不构成任何投资或决策建议。</p>"
         )
+        digest_text = summary_plain_for_digest(summary or "")
         payload = {
             "articles": [
                 {
                     "title": (title or "未命名")[:64],
                     "author": self._author[:16],
-                    "digest": (summary or "")[:120],
+                    "digest": digest_text[:120],
                     "content": content_html,
                     "content_source_url": (source_url or "")[:500],
                     "thumb_media_id": thumb_media_id,

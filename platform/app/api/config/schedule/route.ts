@@ -5,8 +5,10 @@ import type { ScheduleConfig } from "@/types/schedule";
 
 export async function GET() {
   const bff = await fetchBff<ScheduleConfig>("/api/config/schedule");
-  if (bff) return NextResponse.json(bff);
-  return NextResponse.json(MOCK_SCHEDULE);
+  const body = bff ?? MOCK_SCHEDULE;
+  return NextResponse.json(body, {
+    headers: { "Cache-Control": "no-store, max-age=0" },
+  });
 }
 
 export async function PUT(req: NextRequest) {

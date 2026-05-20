@@ -12,6 +12,11 @@
     "BVLOS",
     "drone delivery"
   ],
+  "gdelt_english_keywords": [
+    "drone",
+    "eVTOL",
+    "UAM"
+  ],
   "chinese_keywords": [
     "低空经济",
     "无人机",

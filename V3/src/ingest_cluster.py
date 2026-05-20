@@ -37,13 +37,49 @@ class _UF:
             self.p[rb] = ra
 
 
-def _embedding_gate(settings: Settings) -> bool:
-    if not settings.embedding_cluster_enabled or not settings.embedding_enabled:
+def _embedding_available(settings: Settings) -> bool:
+    """Embedding 服务可用（不要求 ``EMBEDDING_CLUSTER_ENABLED``）。"""
+    if not settings.embedding_enabled:
         return False
     backend = (settings.embedding_backend or "local").strip().lower()
     if backend == "local":
         return True
     return bool((settings.embedding_api_key or "").strip())
+
+
+def _embedding_gate(settings: Settings) -> bool:
+    if not settings.embedding_cluster_enabled:
+        return False
+    return _embedding_available(settings)
+
+
+def _cluster_time_span_hours(parts: list[Any]) -> float:
+    from datetime import datetime
+
+    times: list[datetime] = []
+    for p in parts:
+        raw = (getattr(p, "source_published_at", "") or "").strip()
+        if not raw:
+            continue
+        try:
+            times.append(datetime.fromisoformat(raw.replace("Z", "+00:00")))
+        except ValueError:
+            continue
+    if len(times) < 2:
+        return 0.0
+    return (max(times) - min(times)).total_seconds() / 3600.0
+
+
+def _cluster_representative(cluster: list[Any]) -> Any:
+    """簇代表稿：发布时间最早的一条（与转载合并保留策略一致）。"""
+    return min(cluster, key=lambda p: _iso_sort_key(getattr(p, "source_published_at", "") or ""))
+
+
+def _rep_embedding_text(item: Any, *, max_chars: int) -> str:
+    return truncate_for_embedding(
+        f"{getattr(item, 'title', '') or ''}\n{getattr(item, 'text', '') or ''}",
+        max_chars,
+    )
 
 
 def _iso_sort_key(published_at: str) -> str:
@@ -271,6 +307,109 @@ async def build_embedding_event_clusters_with_report(
         report.reprint_dropped,
     )
     return clusters, report.reprint_dropped, report
+
+
+async def merge_clusters_by_embedding(
+    clusters: list[list[Any]],
+    settings: Settings,
+    *,
+    max_span_hours: float | None = None,
+) -> list[list[Any]]:
+    """
+    对已分好的簇做向量并查集合并：代表稿余弦 ≥ ``embedding_event_link_min`` 且同窗内则并簇。
+    用于冷启动（topic_key 分簇）后的二次合并，替代关键词枚举式软合并。
+    """
+    if not clusters or len(clusters) <= 1:
+        return clusters
+    if not _embedding_available(settings):
+        return clusters
+
+    span_limit = float(max_span_hours if max_span_hours is not None else settings.cluster_merge_hours)
+    t_link = float(settings.embedding_event_link_min)
+    reps = [_cluster_representative(c) for c in clusters]
+    n = len(reps)
+    inputs = [
+        _rep_embedding_text(r, max_chars=int(settings.embedding_max_input_chars)) for r in reps
+    ]
+    embeddings: list[list[float] | None] = [None] * n
+    bs = max(1, int(settings.embedding_batch_size))
+    try:
+        async with httpx.AsyncClient(timeout=120.0, follow_redirects=True) as client:
+            pos = 0
+            while pos < n:
+                chunk = inputs[pos : pos + bs]
+                be = (settings.embedding_backend or "local").strip().lower()
+                sub_client = client if be == "http" else None
+                part = await fetch_embeddings_batch(
+                    settings=settings,
+                    inputs=chunk,
+                    client=sub_client,
+                )
+                for j, vec in enumerate(part):
+                    if pos + j < n:
+                        embeddings[pos + j] = vec
+                pos += bs
+    except Exception:
+        logger.exception("embedding cluster merge: fetch failed, keep input clusters")
+        return clusters
+
+    if not any(v is not None for v in embeddings):
+        logger.warning("embedding cluster merge: no vectors, keep input clusters")
+        return clusters
+
+    parent = list(range(n))
+
+    def find(i: int) -> int:
+        while parent[i] != i:
+            parent[i] = parent[parent[i]]
+            i = parent[i]
+        return i
+
+    def union(i: int, j: int) -> None:
+        ri, rj = find(i), find(j)
+        if ri != rj:
+            parent[rj] = ri
+
+    merged_pairs = 0
+    for i in range(n):
+        vi = embeddings[i]
+        if vi is None:
+            continue
+        for j in range(i + 1, n):
+            vj = embeddings[j]
+            if vj is None:
+                continue
+            sim = cosine_similarity(vi, vj)
+            if sim < t_link:
+                continue
+            combined = clusters[i] + clusters[j]
+            if _cluster_time_span_hours(combined) > span_limit:
+                continue
+            if find(i) != find(j):
+                union(i, j)
+                merged_pairs += 1
+                logger.info(
+                    "embedding cluster merge: union i=%d j=%d cosine=%.4f span_h=%.1f",
+                    i,
+                    j,
+                    sim,
+                    _cluster_time_span_hours(combined),
+                )
+
+    if merged_pairs == 0:
+        return clusters
+
+    buckets: dict[int, list[Any]] = defaultdict(list)
+    for i in range(n):
+        buckets[find(i)].extend(clusters[i])
+    out = list(buckets.values())
+    logger.info(
+        "embedding cluster merge: in_clusters=%d out_clusters=%d merged_edges=%d",
+        len(clusters),
+        len(out),
+        merged_pairs,
+    )
+    return out
 
 
 async def build_embedding_event_clusters(

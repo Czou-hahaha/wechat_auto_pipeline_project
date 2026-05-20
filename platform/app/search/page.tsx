@@ -4,20 +4,13 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { Search } from "lucide-react";
 import { useSearchQuery } from "@/hooks/use-events";
-import { useSearchStore, type SearchMode } from "@/store/search";
+import { useSearchStore } from "@/store/search";
 import { EventCard } from "@/features/events/event-card";
-import { cn } from "@/lib/utils";
-
-const MODES: { id: SearchMode; label: string }[] = [
-  { id: "semantic", label: "Semantic" },
-  { id: "event", label: "Event" },
-  { id: "keyword", label: "Keyword" },
-];
 
 export default function SearchPage() {
-  const { query, mode, setQuery, setMode } = useSearchStore();
+  const { query, setQuery } = useSearchStore();
   const [submitted, setSubmitted] = useState("eVTOL");
-  const { data, isFetching } = useSearchQuery(submitted, mode);
+  const { data, isFetching } = useSearchQuery(submitted);
 
   return (
     <div className="mx-auto max-w-3xl space-y-8">
@@ -26,30 +19,12 @@ export default function SearchPage() {
         animate={{ opacity: 1, y: 0 }}
         className="text-center"
       >
-        <h1 className="text-2xl font-semibold text-gradient-subtle">Search</h1>
+        <h1 className="text-2xl font-semibold text-gradient-subtle">事件检索</h1>
         <p className="mt-2 text-sm text-zinc-500">
-          在<strong className="text-zinc-400">已入库事件</strong>中检索（不是配置采集词表）。
-          管理抓取来源与关键词请前往「采集配置」。
+          在<strong className="text-zinc-400">已入库事件</strong>中搜索：同时匹配标题、摘要与关键词，
+          按相关度排序。配置 RSS / GDELT 抓取词表请前往「采集配置」。
         </p>
       </motion.div>
-
-      <div className="flex justify-center gap-2">
-        {MODES.map((m) => (
-          <button
-            key={m.id}
-            type="button"
-            onClick={() => setMode(m.id)}
-            className={cn(
-              "rounded-full border px-4 py-1.5 text-xs transition-colors",
-              mode === m.id
-                ? "border-sky-500/40 bg-sky-500/10 text-sky-300"
-                : "border-white/[0.06] text-zinc-500",
-            )}
-          >
-            {m.label}
-          </button>
-        ))}
-      </div>
 
       <form
         onSubmit={(e) => {
@@ -62,7 +37,7 @@ export default function SearchPage() {
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="搜索事件、关键词、语义…"
+          placeholder="输入主题词，如 eVTOL、低空经济、无人机…"
           className="flex-1 bg-transparent text-sm text-zinc-100 placeholder:text-zinc-600 focus:outline-none"
         />
         <button
@@ -80,7 +55,7 @@ export default function SearchPage() {
       {data && data.items.length > 0 && (
         <div className="space-y-3">
           <p className="text-xs text-zinc-600">
-            {data.total} 个事件 · 模式 {data.mode}
+            共 {data.total} 个事件 · 标题优先，其次关键词与摘要
           </p>
           {data.items.map((ev, i) => (
             <EventCard key={ev.id} event={ev} index={i} />

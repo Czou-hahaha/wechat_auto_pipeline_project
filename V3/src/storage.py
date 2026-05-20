@@ -204,6 +204,43 @@ class JsonStore:
             return True
         return False
 
+    def clear_extracted_text_for_article(self, article_id: str) -> bool:
+        """清空单条稿件正文（草稿已推送后瘦身库）。"""
+        aid = (article_id or "").strip()
+        if not aid:
+            return False
+        rows = self._read()
+        changed = False
+        for row in rows:
+            if str(row.get("id", "")) != aid:
+                continue
+            if not str(row.get("extracted_text", "") or "").strip():
+                return False
+            row["extracted_text"] = ""
+            changed = True
+            break
+        if changed:
+            self._write(rows)
+        return changed
+
+    def clear_extracted_text_for_event(self, event_id: str) -> int:
+        """清空同一 event 下所有稿件正文；返回实际清空条数。"""
+        eid = (event_id or "").strip()
+        if not eid:
+            return 0
+        rows = self._read()
+        n = 0
+        for row in rows:
+            if str(row.get("event_id", "") or "").strip() != eid:
+                continue
+            if not str(row.get("extracted_text", "") or "").strip():
+                continue
+            row["extracted_text"] = ""
+            n += 1
+        if n:
+            self._write(rows)
+        return n
+
     def title_duplicate_against_history(self, title: str) -> bool:
         """仅看标题：与库中任一条标题相同或高度相似则视为重复（可跳过抓取/入稿）。"""
         norm = self._norm_text(title)

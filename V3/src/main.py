@@ -52,12 +52,16 @@ async def run_once() -> None:
     stats = await PipelineRunner(s).run_once()
     logging.info(
         "run_once done: candidates=%d published=%d staged_for_review=%d skipped_duplicate=%d skipped_policy=%d "
-        "skipped_encoding=%d skipped_digest=%d skipped_too_short=%d skipped_summary_fallback=%d skipped_qa=%d failed=%d",
+        "skipped_prefilter=%d skipped_summarize_cap=%d skipped_insufficient_articles=%d skipped_encoding=%d "
+        "skipped_digest=%d skipped_too_short=%d skipped_summary_fallback=%d skipped_qa=%d failed=%d",
         stats.total_candidates,
         stats.published,
         stats.staged_for_review,
         stats.skipped_duplicate,
         stats.skipped_policy,
+        stats.skipped_prefilter,
+        stats.skipped_summarize_cap,
+        stats.skipped_insufficient_articles,
         stats.skipped_encoding,
         stats.skipped_digest,
         stats.skipped_too_short,
@@ -75,6 +79,28 @@ async def generate_event_press() -> None:
 
     await run_event_press_generation(PipelineRunner(s).store, s, force=True)
     logging.info("generate-event-press done")
+
+
+async def refresh_library_times(max_age_days: int, *, dry_run: bool = False) -> None:
+    from src.library_time_refresh import refresh_library_published_at_and_prune
+
+    s = Settings()
+    setup_logging(s.log_level)
+    stats = await refresh_library_published_at_and_prune(
+        s, max_age_days=max_age_days, dry_run=dry_run
+    )
+    logging.info(
+        "refresh-library-times done: total=%d refreshed=%d fetch_failed=%d kept=%d "
+        "removed_missing_time=%d removed_time_window=%d dry_run=%s max_age_days=%d",
+        stats.total,
+        stats.refreshed,
+        stats.fetch_failed,
+        stats.kept,
+        stats.removed_missing_time,
+        stats.removed_time_window,
+        dry_run,
+        max_age_days,
+    )
 
 
 def clean_library() -> None:
@@ -98,23 +124,32 @@ def clean_library() -> None:
 
 
 def run_scheduler() -> None:
+    from src.bff.schedule_config import load_scheduler_jobs, scheduler_timezone
+
     s = Settings()
     setup_logging(s.log_level)
-    if not s.schedule_enabled:
-        raise ValueError("SCHEDULE_ENABLED=false，无法启动定时任务")
-    sched = BlockingScheduler(timezone=s.schedule_timezone)
+    jobs = load_scheduler_jobs()
+    if not jobs:
+        raise ValueError("定时采集未启用或未配置任务（见 config/schedule_jobs.json）")
+    tz = scheduler_timezone()
+    sched = BlockingScheduler(timezone=tz)
 
     def _job() -> None:
         asyncio.run(run_once())
 
-    sched.add_job(_job, CronTrigger(hour=s.schedule_morning_hour, minute=0), id="morning", replace_existing=True)
-    sched.add_job(_job, CronTrigger(hour=s.schedule_evening_hour, minute=0), id="evening", replace_existing=True)
-    logging.info(
-        "scheduler started at %02d:00 and %02d:00 (%s)",
-        s.schedule_morning_hour,
-        s.schedule_evening_hour,
-        s.schedule_timezone,
-    )
+    labels: list[str] = []
+    for job in jobs:
+        jid = str(job.get("id") or "").strip() or f"job_{len(labels)}"
+        hour = int(job.get("hour", 8))
+        minute = int(job.get("minute", 0))
+        sched.add_job(
+            _job,
+            CronTrigger(hour=hour, minute=minute),
+            id=jid,
+            replace_existing=True,
+        )
+        labels.append(f"{job.get('label', jid)} {hour:02d}:{minute:02d}")
+    logging.info("scheduler started (%s): %s", tz, " | ".join(labels))
     sched.start()
 
 
@@ -127,6 +162,7 @@ def _execute_cli() -> None:
             "run-scheduler",
             "push-today-drafts",
             "clean-library",
+            "refresh-library-times",
             "generate-event-press",
             "run-bff",
         ],
@@ -137,6 +173,17 @@ def _execute_cli() -> None:
         metavar="YYYY-MM-DD",
         help="仅 push-today-drafts：按本地日筛选 created_at（默认今天，时区见 SCHEDULE_TIMEZONE）",
     )
+    parser.add_argument(
+        "--max-age-days",
+        type=int,
+        default=7,
+        help="refresh-library-times：保留 source_published_at 在最近 N 天内的文章（默认 7）",
+    )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="refresh-library-times：只统计不落盘",
+    )
     args = parser.parse_args()
     if args.command == "run-once":
         asyncio.run(run_once())
@@ -144,6 +191,8 @@ def _execute_cli() -> None:
         run_scheduler()
     elif args.command == "clean-library":
         clean_library()
+    elif args.command == "refresh-library-times":
+        asyncio.run(refresh_library_times(args.max_age_days, dry_run=args.dry_run))
     elif args.command == "generate-event-press":
         asyncio.run(generate_event_press())
     elif args.command == "run-bff":

@@ -19,6 +19,7 @@ import { useDashboard } from "@/hooks/use-events";
 import { CardStatic } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ImportanceBadge } from "@/components/events/importance-badge";
+import { RunOncePanel } from "@/components/pipeline/run-once-panel";
 
 const PIE_COLORS = ["#38bdf8", "#6366f1"];
 
@@ -43,8 +44,16 @@ export default function DashboardPage() {
     { name: "国际", value: data.regionSplit.international },
   ];
 
+  const hotKwMaxLen = Math.max(
+    4,
+    ...data.hotKeywords.map((k) => (k.keyword || "").length),
+  );
+  const hotKwAxisWidth = Math.min(200, Math.max(96, hotKwMaxLen * 11));
+
   return (
     <div className="space-y-6">
+      <RunOncePanel />
+
       <div>
         <h1 className="text-2xl font-semibold text-gradient-subtle">Dashboard</h1>
         <p className="mt-1 text-sm text-zinc-500">低空经济事件情报总览</p>
@@ -76,19 +85,19 @@ export default function DashboardPage() {
       <div className="grid gap-4 lg:grid-cols-3">
         <CardStatic className="lg:col-span-2">
           <h2 className="mb-4 text-sm font-medium text-zinc-400">
-            FAA / BVLOS / eVTOL 热度趋势
+            关键词热度（近 7 日 · 来自事件库）
           </h2>
           <div className="h-56">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={data.topicTrend}>
                 <defs>
-                  <linearGradient id="faa" x1="0" y1="0" x2="0" y2="1">
+                  <linearGradient id="kw-main" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor="#38bdf8" stopOpacity={0.3} />
                     <stop offset="100%" stopColor="#38bdf8" stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <XAxis dataKey="date" stroke="#52525b" fontSize={10} />
-                <YAxis stroke="#52525b" fontSize={10} />
+                <YAxis stroke="#52525b" fontSize={10} allowDecimals={false} />
                 <Tooltip
                   contentStyle={{
                     background: "#18181b",
@@ -98,14 +107,14 @@ export default function DashboardPage() {
                 />
                 <Area
                   type="monotone"
-                  dataKey="FAA"
+                  dataKey="低空经济"
                   stroke="#38bdf8"
-                  fill="url(#faa)"
+                  fill="url(#kw-main)"
                   strokeWidth={2}
                 />
                 <Area
                   type="monotone"
-                  dataKey="BVLOS"
+                  dataKey="无人机"
                   stroke="#a78bfa"
                   fill="transparent"
                   strokeWidth={1.5}
@@ -150,22 +159,59 @@ export default function DashboardPage() {
 
       <div className="grid gap-4 lg:grid-cols-2">
         <CardStatic>
-          <h2 className="mb-4 text-sm font-medium text-zinc-400">热门关键词</h2>
-          <div className="h-48">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={data.hotKeywords} layout="vertical">
-                <XAxis type="number" stroke="#52525b" fontSize={10} />
-                <YAxis
-                  type="category"
-                  dataKey="keyword"
-                  stroke="#52525b"
-                  fontSize={10}
-                  width={72}
-                />
-                <Bar dataKey="count" fill="#38bdf8" radius={[0, 4, 4, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
+          <h2 className="mb-4 text-sm font-medium text-zinc-400">热门主题词</h2>
+          <p className="mb-3 text-[11px] text-zinc-600">
+            统计采集配置中的检索词在事件标题/摘要中的命中次数
+          </p>
+          {data.hotKeywords.length === 0 ? (
+            <p className="text-xs text-zinc-600">
+              暂无命中，请先采集事件或检查采集配置中的主题词
+            </p>
+          ) : (
+            <>
+              <ul className="mb-3 flex flex-wrap gap-2">
+                {data.hotKeywords.map((k) => (
+                  <li
+                    key={k.keyword}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-sky-500/25 bg-sky-500/10 px-3 py-1 text-xs text-sky-200"
+                  >
+                    <span>{k.keyword}</span>
+                    <span className="tabular-nums text-sky-400/80">{k.count}</span>
+                  </li>
+                ))}
+              </ul>
+              <div className="h-40 min-h-[10rem] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={data.hotKeywords}
+                    layout="vertical"
+                    margin={{ left: 4, right: 12, top: 4, bottom: 4 }}
+                  >
+                    <XAxis type="number" stroke="#52525b" fontSize={10} />
+                    <YAxis
+                      type="category"
+                      dataKey="keyword"
+                      stroke="#52525b"
+                      fontSize={10}
+                      width={hotKwAxisWidth}
+                      interval={0}
+                      tick={{ fill: "#a1a1aa" }}
+                    />
+                    <Tooltip
+                      formatter={(value: number) => [value, "出现次数"]}
+                      labelFormatter={(label) => String(label)}
+                    />
+                    <Bar
+                      dataKey="count"
+                      fill="#38bdf8"
+                      radius={[0, 4, 4, 0]}
+                      minPointSize={8}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </>
+          )}
         </CardStatic>
 
         <CardStatic>
