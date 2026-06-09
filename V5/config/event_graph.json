@@ -1,0 +1,50 @@
+{
+  "enabled": true,
+  "ner_backend": "lexicon",
+  "embedding_model": "BAAI/bge-m3",
+  "evolution": {
+    "same_event_threshold": 0.82,
+    "continuation_threshold": 0.72,
+    "entity_overlap_min": 0.35,
+    "action_overlap_min": 0.25,
+    "max_days_continuation": 30
+  },
+  "extraction": {
+    "min_entity_confidence": 0.55,
+    "min_edge_confidence": 0.5,
+    "max_entities_per_event": 40
+  },
+  "timeouts": {
+    "ner_sec": 15.0,
+    "embedding_sec": 60.0,
+    "pg_sec": 30.0
+  },
+  "retries": {
+    "max_attempts": 3,
+    "backoff_sec": 1.5
+  },
+  "domain_lexicon": {
+    "organization": [
+      "FAA", "Federal Aviation Administration", "CAAC", "中国民航局", "EASA", "FCC",
+      "DJI", "EHang", "Joby Aviation", "Archer Aviation", "FAA"
+    ],
+    "company": [
+      "DJI", "EHang", "Joby Aviation", "Archer Aviation", "Xpeng AeroHT", "亿航", "大疆"
+    ],
+    "policy": [
+      "BVLOS", "Remote ID", "超视距", "远程识别", "适航审定", "低空经济", "UAM", "eVTOL"
+    ],
+    "technology": [
+      "BVLOS", "Remote ID", "eVTOL", "UAM", "AAM", "drone delivery", "低空经济"
+    ],
+    "country": [
+      "United States", "China", "United Kingdom", "EU", "美国", "中国", "英国"
+    ]
+  },
+  "relation_patterns": [
+    {"pattern": "(?P<a>\\w[\\w\\s]{1,40}?)\\s+regulates\\s+(?P<b>\\w[\\w\\s]{1,40})", "relation": "regulates", "confidence": 0.8},
+    {"pattern": "(?P<a>\\w[\\w\\s]{1,40}?)\\s+competes with\\s+(?P<b>\\w[\\w\\s]{1,40})", "relation": "competes_with", "confidence": 0.75},
+    {"pattern": "(?P<a>BVLOS|Remote ID|超视距|远程识别)\\s+(?:rule|rules|规定|政策)", "relation": "related_to", "confidence": 0.7},
+    {"pattern": "(?P<a>FAA|CAAC|EASA)\\s+(?:announces?|发布|出台)\\s+(?P<b>.{5,80})", "relation": "announced_by", "confidence": 0.78}
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "mode": "json_store",
+  "generated_at": "2026-05-14T17:40:41.343229+00:00",
+  "environment_note": "本次执行环境对 GDELT 长 OR 查询返回 429/空体，gdelt_candidate_urls 为空；JSON 模式无 PostgreSQL 仍跑通。本机 GDELT 正常时可出现候选 URL 与 urls_added_to_store。",
+  "max_articles_per_event": 5,
+  "events": [
+    {
+      "event_id": "666eb4ad-9054-4ca8-8db6-8b800eadac9a",
+      "event_title": "《北京市无人驾驶航空器管理规定》今年5月1日实施 对无人驾驶航空器飞行和销售运输存储作出新规定",
+      "seed_article_count": 4,
+      "queries": [
+        "((eVTOL) OR (drone) OR (低空经济) OR (北京市无人驾驶航空器管理规定) OR (今年) OR (日实施) OR (对无人驾驶航空器飞行和销售运输存储作出新规定) OR (聚类成员)) sourcelang:english",
+        "((eVTOL) OR (drone) OR (低空经济) OR (北京市无人驾驶航空器管理规定) OR (今年) OR (日实施) OR (对无人驾驶航空器飞行和销售运输存储作出新规定) OR (聚类成员)) sourcelang:chinese"
+      ],
+      "gdelt_candidate_urls": [],
+      "status": "success",
+      "urls_passed_similarity": [],
+      "urls_added_to_store": [],
+      "candidates_fetched": 0,
+      "articles_inserted": 0,
+      "similarity_threshold": 0.8
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.9.13, pytest-8.4.2, pluggy-1.6.0 -- /Users/corrine/miniconda3/bin/python3
+cachedir: .pytest_cache
+rootdir: /Users/corrine/Desktop/programming/Cursor/微信公众号自动化项目/event_enhancement
+plugins: anyio-3.6.2
+collecting ... collected 2 items
+
+tests/test_importance.py::test_importance_reuters_host_scores_30 PASSED  [ 50%]
+tests/test_importance.py::test_article_count_score_cap PASSED            [100%]
+
+============================== 2 passed in 0.01s ===============================

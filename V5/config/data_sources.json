@@ -1,0 +1,388 @@
+[
+  {
+    "id": "cn_gov_001",
+    "name": "中国政府网",
+    "kind": "web",
+    "source_type": "policy",
+    "region": "CN",
+    "language": "zh",
+    "value": "gov.cn",
+    "ingest_mode": "html_list",
+    "list_monitor_url": "https://www.gov.cn/zhengce/index.htm",
+    "importance_score": 100,
+    "tags": [
+      "低空经济",
+      "国务院",
+      "政策"
+    ]
+  },
+  {
+    "id": "cn_caac_001",
+    "name": "中国民航局",
+    "kind": "web",
+    "source_type": "aviation_policy",
+    "region": "CN",
+    "language": "zh",
+    "value": "caac.gov.cn",
+    "ingest_mode": "html_list",
+    "list_monitor_url": "https://www.caac.gov.cn/XWZX/",
+    "importance_score": 100,
+    "tags": [
+      "民航",
+      "无人机",
+      "低空经济"
+    ]
+  },
+  {
+    "id": "cn_ndrc_001",
+    "name": "国家发改委",
+    "kind": "web",
+    "source_type": "policy",
+    "region": "CN",
+    "language": "zh",
+    "value": "ndrc.gov.cn",
+    "ingest_mode": "html_list",
+    "list_monitor_url": "https://www.ndrc.gov.cn/xwdt/",
+    "importance_score": 95,
+    "tags": [
+      "产业政策",
+      "基建",
+      "经济"
+    ]
+  },
+  {
+    "id": "cn_miit_001",
+    "name": "工信部",
+    "kind": "web",
+    "source_type": "industry_policy",
+    "region": "CN",
+    "language": "zh",
+    "value": "miit.gov.cn",
+    "ingest_mode": "html_list",
+    "list_monitor_url": "https://www.miit.gov.cn/xwdt/index.html",
+    "importance_score": 95,
+    "tags": [
+      "工业",
+      "制造",
+      "无人机"
+    ]
+  },
+  {
+    "id": "cn_most_001",
+    "name": "科技部",
+    "kind": "web",
+    "source_type": "science_policy",
+    "region": "CN",
+    "language": "zh",
+    "value": "most.gov.cn",
+    "ingest_mode": "html_list",
+    "list_monitor_url": "https://www.most.gov.cn/satp/",
+    "importance_score": 90,
+    "tags": [
+      "科技",
+      "AI",
+      "创新"
+    ]
+  },
+  {
+    "id": "cn_cls_001",
+    "name": "财联社",
+    "kind": "web",
+    "source_type": "financial_media",
+    "region": "CN",
+    "language": "zh",
+    "value": "cls.cn",
+    "ingest_mode": "html_list",
+    "list_monitor_url": "https://www.cls.cn/",
+    "importance_score": 85,
+    "tags": [
+      "财经",
+      "产业"
+    ]
+  },
+  {
+    "id": "cn_36kr_001",
+    "name": "36氪",
+    "kind": "web",
+    "source_type": "tech_media",
+    "region": "CN",
+    "language": "zh",
+    "value": "36kr.com",
+    "rss": "https://36kr.com/feed",
+    "rss_available": true,
+    "published_at_css": [
+      ".article-title-sub span.item-time",
+      "span.item-time",
+      ".article-title-icon span.item-time",
+      ".article-detail-info span"
+    ],
+    "importance_score": 75,
+    "tags": [
+      "科技",
+      "创业"
+    ]
+  },
+  {
+    "id": "cn_36kr_list_002",
+    "name": "36氪-硬科技",
+    "kind": "web",
+    "source_type": "tech_media",
+    "region": "CN",
+    "language": "zh",
+    "value": "36kr.com",
+    "ingest_mode": "html_list",
+    "list_monitor_url": "https://36kr.com/information/web_news/",
+    "published_at_css": [
+      "span.item-time",
+      ".article-title-sub span.item-time"
+    ],
+    "importance_score": 78,
+    "tags": [
+      "科技",
+      "硬科技",
+      "低空经济"
+    ]
+  },
+  {
+    "id": "cn_tmtpost_001",
+    "name": "钛媒体",
+    "kind": "web",
+    "source_type": "tech_media",
+    "region": "CN",
+    "language": "zh",
+    "value": "tmtpost.com",
+    "rss": "https://www.tmtpost.com/rss.xml",
+    "rss_available": true,
+    "ingest_mode": "html_list",
+    "list_monitor_url": "https://www.tmtpost.com/nictation",
+    "published_at_css": [
+      ".section-article .time",
+      ".post_left .time",
+      ".time",
+      "span.time"
+    ],
+    "importance_score": 76,
+    "tags": [
+      "科技",
+      "产业",
+      "无人机"
+    ]
+  },
+  {
+    "id": "cn_huxiu_001",
+    "name": "虎嗅",
+    "kind": "web",
+    "source_type": "tech_media",
+    "region": "CN",
+    "language": "zh",
+    "value": "huxiu.com",
+    "ingest_mode": "html_list",
+    "list_monitor_url": "https://www.huxiu.com/",
+    "published_at_css": [
+      ".article__time",
+      "time[datetime]",
+      ".time"
+    ],
+    "importance_score": 74,
+    "tags": [
+      "科技",
+      "商业"
+    ]
+  },
+  {
+    "id": "cn_jiemian_001",
+    "name": "界面新闻-科技",
+    "kind": "web",
+    "source_type": "financial_media",
+    "region": "CN",
+    "language": "zh",
+    "value": "jiemian.com",
+    "ingest_mode": "html_list",
+    "list_monitor_url": "https://www.jiemian.com/lists/8.html",
+    "published_at_css": [
+      ".article-header time",
+      ".article-info time",
+      ".article-info span",
+      "time[datetime]"
+    ],
+    "importance_score": 77,
+    "tags": [
+      "财经",
+      "科技",
+      "低空经济"
+    ]
+  },
+  {
+    "id": "cn_yicai_001",
+    "name": "第一财经",
+    "kind": "web",
+    "source_type": "financial_media",
+    "region": "CN",
+    "language": "zh",
+    "value": "yicai.com",
+    "ingest_mode": "html_list",
+    "list_monitor_url": "https://www.yicai.com/",
+    "published_at_css": [
+      ".tile-time",
+      ".news-date",
+      "time[datetime]",
+      ".time"
+    ],
+    "importance_score": 80,
+    "tags": [
+      "财经",
+      "产业",
+      "低空经济"
+    ]
+  },
+  {
+    "id": "us_faa_001",
+    "name": "FAA",
+    "kind": "web",
+    "source_type": "aviation_policy",
+    "region": "US",
+    "language": "en",
+    "value": "faa.gov",
+    "ingest_mode": "html_list",
+    "list_monitor_url": "https://www.faa.gov/newsroom",
+    "importance_score": 100,
+    "tags": [
+      "FAA",
+      "Drone",
+      "AAM"
+    ]
+  },
+  {
+    "id": "eu_easa_001",
+    "name": "EASA",
+    "kind": "web",
+    "source_type": "aviation_policy",
+    "region": "EU",
+    "language": "en",
+    "value": "easa.europa.eu",
+    "ingest_mode": "html_list",
+    "list_monitor_url": "https://www.easa.europa.eu/en/newsroom-and-events/news",
+    "importance_score": 95,
+    "tags": [
+      "EU",
+      "Drone",
+      "Regulation"
+    ]
+  },
+  {
+    "id": "us_nasa_aam_001",
+    "name": "NASA",
+    "kind": "web",
+    "source_type": "research",
+    "region": "US",
+    "language": "en",
+    "value": "nasa.gov",
+    "rss": "https://www.nasa.gov/rss/dyn/breaking_news.rss",
+    "rss_available": true,
+    "importance_score": 85,
+    "tags": [
+      "AAM",
+      "航空",
+      "研究"
+    ]
+  },
+  {
+    "id": "global_dronedj_001",
+    "name": "DroneDJ",
+    "kind": "web",
+    "source_type": "drone_media",
+    "region": "GLOBAL",
+    "language": "en",
+    "value": "dronedj.com",
+    "rss": "https://dronedj.com/feed/",
+    "rss_available": true,
+    "importance_score": 100,
+    "tags": [
+      "Drone",
+      "DJI",
+      "UAV"
+    ]
+  },
+  {
+    "id": "global_suas_001",
+    "name": "sUAS News",
+    "kind": "web",
+    "source_type": "drone_media",
+    "region": "GLOBAL",
+    "language": "en",
+    "value": "suasnews.com",
+    "rss": "https://www.suasnews.com/feed/",
+    "rss_available": true,
+    "importance_score": 90,
+    "tags": [
+      "UAS",
+      "Drone"
+    ]
+  },
+  {
+    "id": "us_techcrunch_001",
+    "name": "TechCrunch",
+    "kind": "web",
+    "source_type": "tech_media",
+    "region": "US",
+    "language": "en",
+    "value": "techcrunch.com",
+    "rss": "https://techcrunch.com/feed/",
+    "rss_available": true,
+    "importance_score": 80,
+    "tags": [
+      "科技",
+      "AI",
+      "创业"
+    ]
+  },
+  {
+    "id": "us_ieee_001",
+    "name": "IEEE Spectrum",
+    "kind": "web",
+    "source_type": "research_media",
+    "region": "US",
+    "language": "en",
+    "value": "spectrum.ieee.org",
+    "ingest_mode": "html_list",
+    "list_monitor_url": "https://spectrum.ieee.org/topic/aerospace/",
+    "importance_score": 85,
+    "tags": [
+      "无人机",
+      "低空经济",
+      "航空"
+    ]
+  },
+  {
+    "id": "cn_shenzhen_001",
+    "name": "深圳市政府",
+    "kind": "web",
+    "source_type": "local_policy",
+    "region": "CN",
+    "language": "zh",
+    "value": "sz.gov.cn",
+    "ingest_mode": "html_list",
+    "list_monitor_url": "http://www.sz.gov.cn/",
+    "importance_score": 95,
+    "tags": [
+      "深圳",
+      "低空经济"
+    ]
+  },
+  {
+    "id": "company_dji_001",
+    "name": "DJI",
+    "kind": "web",
+    "source_type": "company",
+    "region": "CN",
+    "language": "en",
+    "value": "dji.com",
+    "ingest_mode": "html_list",
+    "list_monitor_url": "https://www.dji.com/cn/media-center",
+    "importance_score": 90,
+    "tags": [
+      "DJI",
+      "Drone"
+    ]
+  }
+]
