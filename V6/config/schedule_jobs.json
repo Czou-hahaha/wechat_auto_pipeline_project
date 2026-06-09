@@ -1,0 +1,17 @@
+{
+  "enabled": true,
+  "timezone": "Asia/Shanghai",
+  "jobs": [
+    {
+      "id": "j1",
+      "label": "早间",
+      "hour": 8,
+      "minute": 0
+    }
+  ],
+  "article_age": {
+    "unit": "hours",
+    "value": 14
+  },
+  "article_age_limit_enabled": true
+}

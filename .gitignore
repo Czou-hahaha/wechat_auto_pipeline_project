@@ -1,0 +1,37 @@
+# Secrets
+.env
+.env.local
+**/.env
+!**/.env.example
+**/.env.env.bak*
+**/.env.bak*
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.venv/
+venv/
+
+# V6 runtime data (keep demo/)
+V6/data/**
+!V6/data/demo/
+!V6/data/demo/**
+V6/data/*.log
+V6/data/*.pid
+V6/config/*.bak*
+
+# Node / Next.js
+platform-v6/node_modules/
+platform-v6/.next/
+platform-v6/out/
+platform-v6/.env.local
+npm-debug.log*
+
+# OS / IDE
+.DS_Store
+.idea/
+.vscode/
+*.swp

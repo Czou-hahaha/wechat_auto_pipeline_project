@@ -1,0 +1,24 @@
+.env
+.env.*
+!.env.example
+
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.DS_Store
+
+# Runtime data (commit demo/ only)
+data/**
+!data/demo/
+!data/demo/**
+
+# Config / env backups
+config/*.bak*
+
+# Logs & process files
+*.log
+*.pid
+
+agent-tools/

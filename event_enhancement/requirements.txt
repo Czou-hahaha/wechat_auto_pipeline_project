@@ -1,0 +1,19 @@
+# Python 3.11+
+httpx>=0.27.0
+sqlalchemy[asyncio]>=2.0.30
+asyncpg>=0.29.0
+alembic>=1.13.0
+pydantic>=2.8.0
+pydantic-settings>=2.4.0
+pyyaml>=6.0.0
+numpy>=1.26.0
+faiss-cpu>=1.8.0
+trafilatura>=1.12.0,<3
+lxml_html_clean>=0.4.0
+charset-normalizer>=3.2.0
+transformers>=4.36.0,<4.46.0
+sentence-transformers>=3.0.0,<5
+# 可选扩搜后端：config ``web_search_backend: ddgs``
+ddgs>=9.8.0
+# Google News RSS ``/rss/articles/...`` → 发布站 URL（trafilatura 需落地页）
+googlenewsdecoder>=0.1.7

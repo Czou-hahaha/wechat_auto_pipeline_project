@@ -1,0 +1,160 @@
+{
+  "version": 1,
+  "comment": "search_url 里的 {query} 是程序占位符（不是合法 URL 字符）。运行时由 browser_zh_search.py 替换为 URL 编码后的关键词，例如 无人机 -> %E6%97%A0%E4%BA%BA%E6%9C%BA。浏览器手测请用替换后的完整链接，勿直接打开含 {query} 的地址。",
+  "sites": [
+    {
+      "source_id": "cn_cls_001",
+      "domain": "cls.cn",
+      "strategies": [
+        {
+          "kind": "search_url",
+          "url": "https://www.cls.cn/searchPage?keyword={query}",
+          "wait_ms": 4000,
+          "scroll_rounds": 3,
+          "link_href_contains": "/detail/"
+        }
+      ]
+    },
+    {
+      "source_id": "cn_36kr_001",
+      "domain": "36kr.com",
+      "strategies": [
+        {
+          "kind": "search_url",
+          "url": "https://36kr.com/search/articles/{query}",
+          "wait_ms": 4000,
+          "scroll_rounds": 2,
+          "link_href_contains": "/p/",
+          "time_selector": "span.item-time"
+        }
+      ]
+    },
+    {
+      "source_id": "cn_yicai_001",
+      "domain": "yicai.com",
+      "strategies": [
+        {
+          "kind": "search_url",
+          "url": "https://www.yicai.com/search?keys={query}",
+          "wait_ms": 4000,
+          "link_href_contains": "/news/"
+        }
+      ]
+    },
+    {
+      "source_id": "cn_jiemian_001",
+      "domain": "jiemian.com",
+      "strategies": [
+        {
+          "kind": "search_url",
+          "url": "https://a.jiemian.com/index.php?m=search&a=index&word={query}",
+          "wait_ms": 5000,
+          "scroll_rounds": 2,
+          "link_href_contains": "/article/"
+        }
+      ]
+    },
+    {
+      "source_id": "cn_huxiu_001",
+      "domain": "huxiu.com",
+      "strategies": [
+        {
+          "kind": "search_url",
+          "url": "https://www.huxiu.com/search?s={query}",
+          "wait_ms": 4000,
+          "link_href_contains": "/article/"
+        }
+      ]
+    },
+    {
+      "source_id": "cn_tmtpost_001",
+      "domain": "tmtpost.com",
+      "strategies": [
+        {
+          "kind": "search_url",
+          "url": "https://www.tmtpost.com/search?q={query}",
+          "wait_ms": 4000,
+          "link_href_contains": "/"
+        }
+      ]
+    },
+    {
+      "source_id": "cn_gov_001",
+      "domain": "gov.cn",
+      "strategies": [
+        {
+          "kind": "search_url",
+          "url": "https://sousuo.www.gov.cn/sousuo/search.shtml?code=17dbd896757b40679c54f6070455767&dataTypeId=107&searchWord={query}",
+          "wait_ms": 5000,
+          "scroll_rounds": 2,
+          "link_href_contains": "gov.cn"
+        }
+      ]
+    },
+    {
+      "source_id": "cn_ndrc_001",
+      "domain": "ndrc.gov.cn",
+      "strategies": [
+        {
+          "kind": "search_url",
+          "url": "https://so.ndrc.gov.cn/s?siteCode=bm04000007&tab=all&qt={query}",
+          "wait_ms": 5000,
+          "scroll_rounds": 2,
+          "link_href_contains": "ndrc.gov.cn"
+        }
+      ]
+    },
+    {
+      "source_id": "cn_miit_001",
+      "domain": "miit.gov.cn",
+      "strategies": [
+        {
+          "kind": "search_url",
+          "url": "https://www.miit.gov.cn/search/index.html?websiteid=1100000001&word={query}",
+          "wait_ms": 5000,
+          "scroll_rounds": 2,
+          "link_href_contains": "miit.gov.cn"
+        }
+      ]
+    },
+    {
+      "source_id": "cn_most_001",
+      "domain": "most.gov.cn",
+      "strategies": [
+        {
+          "kind": "search_url",
+          "url": "https://www.most.gov.cn/search/kj.html?searchword={query}",
+          "wait_ms": 5000,
+          "scroll_rounds": 2,
+          "link_href_contains": "most.gov.cn"
+        }
+      ]
+    },
+    {
+      "source_id": "cn_caac_001",
+      "domain": "caac.gov.cn",
+      "strategies": [
+        {
+          "kind": "search_url",
+          "url": "https://www.caac.gov.cn/was5/web/search?channelid=203956&searchword={query}",
+          "wait_ms": 5000,
+          "scroll_rounds": 2,
+          "link_href_contains": "caac.gov.cn"
+        }
+      ]
+    },
+    {
+      "source_id": "cn_shenzhen_001",
+      "domain": "sz.gov.cn",
+      "strategies": [
+        {
+          "kind": "search_url",
+          "url": "https://www.sz.gov.cn/search/gq/?keywords={query}",
+          "wait_ms": 5000,
+          "scroll_rounds": 2,
+          "link_href_contains": "sz.gov.cn"
+        }
+      ]
+    }
+  ]
+}
